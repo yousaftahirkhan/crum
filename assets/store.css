@@ -328,7 +328,11 @@ section h2{font-size:clamp(26px,2.8vw,36px)}
   body.has-cart .wa-float{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   body.has-cart{padding-bottom:76px}
 }
-@media (min-width:961px){.cart-float{display:none}}
+/* computers: the cart bar is a pill at the bottom centre */
+@media (min-width:961px){
+  .cart-float{min-width:360px;border-radius:14px;padding:13px 20px}
+  body.has-cart{padding-bottom:70px}
+}
 @media (min-width:641px){.mloc{display:none!important}}
 
 /* responsive: phones */
@@ -504,3 +508,15 @@ h1,h2,h3,.hero-text h1,.coll-head h2,.card h3,.promo h2,.story h2,.pinfo h2,.wy 
   .stepper span{min-width:20px}
 }
 .add{gap:.3em}
+
+/* "Added to cart" message with a View cart button */
+.toast{display:flex;align-items:center;gap:14px;justify-content:center}
+.toast .tbtn{flex:none;background:var(--bg);color:var(--ink);border:0;border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px}
+body.has-cart .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.incart{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 8px 8px 14px;font-size:14px}
+.incart .btn{padding:8px 14px;font-size:13.5px}
+.toast span{min-width:0}
+@media (max-width:640px){
+  .toast{left:12px;right:12px;transform:none;max-width:none;justify-content:space-between;text-align:left;padding:10px 10px 10px 16px;border-radius:12px}
+  .toast span{flex:1}
+}

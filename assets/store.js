@@ -283,7 +283,7 @@ function openProduct(pid, sid, keep) {
         <div class="qty" role="group" aria-label="Quantity"><button type="button" data-pmq="-1" aria-label="One less">−</button><span id="pmQty">${PM.qty}</span><button type="button" data-pmq="1" aria-label="One more">+</button></div>
         <button class="btn brand" type="button" id="pmAdd"${ok ? "" : " disabled"}>${ok ? `Add to cart · ${rs(s.price * PM.qty)}` : "Sold out"}</button>
       </div>
-      ${cart[lineKey(p, s)] ? `<button class="link" type="button" id="pmCart" style="align-self:start">${cart[lineKey(p, s)]} in your cart · View cart ›</button>` : ""}
+      ${Object.keys(cart).length ? `<div class="incart"><span>${cart[lineKey(p, s)] ? `${cart[lineKey(p, s)]} × ${esc(s.name)} in your cart` : `${Object.values(cart).reduce((a, b) => a + b, 0)} item(s) in your cart`}</span><button class="btn ghost" type="button" id="pmCart">View cart</button></div>` : ""}
       ${hasWa ? `<a class="btn ghost" href="${esc(waChat(`Hello! I would like to order ${p.name} (${s.name}).`))}" target="_blank" rel="noopener">Ask about this on WhatsApp</a>` : ""}
       ${acc.length ? `<div class="acc">${acc.map(([t, x], i) => `<details${i === 0 ? " open" : ""}><summary>${esc(t)}</summary><p>${esc(x)}</p></details>`).join("")}</div>` : ""}
     </div>`;
@@ -299,15 +299,23 @@ $("pmBody").addEventListener("click", e => {
   if (e.target.closest("#pmAdd")) {
     const l = findLine(S, PM.pid + "|" + PM.sid); if (!l || !sizeAvailable(l.p, l.s)) return;
     const k = lineKey(l.p, l.s); cart[k] = Math.min(99, (cart[k] || 0) + PM.qty); persist(); refresh();
-    toast(`${l.p.name} (${l.s.name}) added to cart`); PM.qty = 1; openProduct(PM.pid, PM.sid, true);
+    addedToast(`${l.p.name} (${l.s.name}) added to cart`); PM.qty = 1; openProduct(PM.pid, PM.sid, true);
   }
 });
+
+/* "Added to cart" message with a View cart button. */
+function addedToast(msg) {
+  const el = $("toast");
+  el.innerHTML = `<span>${esc(msg)}</span><button type="button" class="tbtn" id="toastCart">View cart</button>`;
+  el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 4500);
+  $("toastCart").onclick = () => { el.hidden = true; openCart() };
+}
 
 /* ---------- global clicks ---------- */
 document.addEventListener("click", e => {
   const g = e.target.closest("[data-go]"), a = e.target.closest("[data-add]"), st = e.target.closest("[data-step]"), pv = e.target.closest("[data-pv]"), pol = e.target.closest("[data-policy]"), m = e.target.closest("[data-menu]");
   if (g) { e.preventDefault(); go(g.dataset.go); return }
-  if (a) { const l = findLine(S, a.dataset.add); if (!l || !sizeAvailable(l.p, l.s)) return; cart[a.dataset.add] = (cart[a.dataset.add] || 0) + 1; persist(); refresh(); toast(`${l.p.name} (${l.s.name}) added to cart`); return }
+  if (a) { const l = findLine(S, a.dataset.add); if (!l || !sizeAvailable(l.p, l.s)) return; cart[a.dataset.add] = (cart[a.dataset.add] || 0) + 1; persist(); refresh(); addedToast(`${l.p.name} (${l.s.name}) added to cart`); return }
   if (st) { const k = st.dataset.step; cart[k] = (cart[k] || 0) + +st.dataset.d; if (cart[k] <= 0) { delete cart[k]; toast("Removed from cart") } persist(); refresh(); return }
   if (pv) { openProduct(pv.dataset.pv, pv.dataset.sz); return }
   if (pol) { openPolicy(pol.dataset.policy); return }
