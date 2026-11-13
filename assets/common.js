@@ -65,19 +65,20 @@ const advName = pct => pct >= 100 ? "full payment in advance" : pct + "% advance
 function paymentSummary(S) {
   const pct = advSetting(S), from = advFrom(S);
   if (!pct) return "Every order is paid in cash on delivery.";
-  const ask = `which we ask for only after we accept your order on WhatsApp`;
-  if (!from) return pct >= 100 ? `Orders are paid in full in advance, ${ask}.` : `Orders are confirmed with a ${pct}% advance, ${ask}. The balance is paid on delivery.`;
-  return `Orders under ${rs(from)} are paid in cash on delivery. Orders of ${rs(from)} or more are confirmed with a ${advName(pct)}, ${ask}.`;
+  const how = pct >= 100 ? "paid in full at checkout" : `confirmed with a ${pct}% advance, paid at checkout with the payment screenshot. The remaining amount is paid after we send you a photo of your ready order`;
+  if (!from) return `Orders are ${how}.`;
+  return `Orders under ${rs(from)} are paid in cash on delivery. Orders of ${rs(from)} or more are ${how}.`;
 }
 /* The safety promises shown to customers, built from the shop's settings so they always match. withAdvance adds the
    lines about paying an advance (leave it out for a cash on delivery order). */
 function safetyLines(S, withAdvance = advSetting(S) > 0) {
   const title = ((S.pay.accounts || []).find(a => a && a.active !== false && String(a.number || "").trim() && String(a.title || "").trim()) || {}).title;
   return [
-    "Nothing is paid at checkout. We confirm every order with you on WhatsApp first.",
+    withAdvance ? "We confirm your payment and your order on WhatsApp, with your order ID." : "Nothing is paid at checkout. We confirm your order with you on WhatsApp.",
     S.shop.wa ? `We only message you from our official WhatsApp number, ${S.shop.wa}.` : "",
-    withAdvance ? (title ? `We accept payment only to accounts in the name of ${String(title).trim()}. Check the name in your app before you send.` : "We accept payment only to the accounts we share in our WhatsApp chat. Check the account name in your app before you send.") : "",
-    withAdvance ? "If we cancel your order or cannot deliver it, your advance is refunded in full." : "",
+    withAdvance ? (title ? `Pay only to the accounts shown here, in the name of ${String(title).trim()}. Check the name in your app before you send.` : "Pay only to the accounts shown here. Check the account name in your app before you send.") : "",
+    withAdvance && advSetting(S) < 100 ? "You see a photo of your ready order before you pay the rest." : "",
+    withAdvance ? "If we cannot deliver on your date, your payment is refunded in full." : "",
     "We will never ask for your PIN, OTP or card details."
   ].filter(Boolean);
 }
@@ -91,3 +92,17 @@ function makeOrderNo(shopName) {
   const A = "23456789ABCDEFGHJKMNPQRSTUVWXYZ", r = crypto.getRandomValues(new Uint8Array(4));
   return `${ini}-${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}-${Array.from(r, b => A[b % A.length]).join("")}`;
 }
+
+/* Turns a photo or screenshot into a JPEG of at most max pixels on the long side (white behind any transparency). */
+async function toJpeg(file, max, q) {
+  let src = null, url = "";
+  if (window.createImageBitmap) { try { src = await createImageBitmap(file) } catch (e) { src = null } }
+  if (!src) src = await new Promise((res, rej) => { url = URL.createObjectURL(file); const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("decode")); im.src = url });
+  try {
+    const w = src.width || src.naturalWidth, h = src.height || src.naturalHeight; if (!w || !h) throw new Error("decode");
+    const s = Math.min(1, max / Math.max(w, h)), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+    const x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0, c.width, c.height);
+    const b = await new Promise(r => c.toBlob(r, "image/jpeg", q || .82)); if (!b) throw new Error("decode"); return b;
+  } finally { if (url) URL.revokeObjectURL(url) }
+}
+const blobB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(new Error("read")); r.readAsDataURL(b) });

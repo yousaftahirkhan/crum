@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Open+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600&family=Poppins:wght@400;500;600&family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500;600&family=Libre+Baskerville&family=Nunito+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,400&family=Manrope:wght@400;500&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=27">
-<link rel="stylesheet" href="admin.css?v=27">
+<link rel="stylesheet" href="../assets/base.css?v=31">
+<link rel="stylesheet" href="admin.css?v=31">
 </head>
 <body>
 
@@ -94,34 +94,42 @@
     <div class="demo" id="demoBar" hidden>Local preview on this computer. Nothing is saved or published from here.</div>
     <header class="ptop">
       <button class="menu-btn" type="button" id="sideOpen" aria-label="Open the side panel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <div><h1 id="pageTitle">Orders</h1><p class="hint" id="pageSub"></p></div>
+      <div class="ptxt"><h1 id="pageTitle">Orders</h1><p class="hint" id="pageSub"></p></div>
+      <div class="tb-acts">
+        <span class="live" id="liveSt" title="New orders are checked every 20 seconds"><i></i><span id="liveTxt">Live</span></span>
+        <div class="popwrap">
+          <button class="ib" type="button" id="bellBtn" aria-label="New order alerts" aria-expanded="false" aria-controls="alertPop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button>
+          <div class="pop" id="alertPop" hidden>
+            <b class="pop-h">New order alerts</b>
+            <label class="switch" for="alertSound"><input type="checkbox" id="alertSound" checked><span class="knob" aria-hidden="true"></span><span class="st" id="alertSoundSt">Sound on</span></label>
+            <p class="hint" id="soundHint"></p>
+            <div class="pop-acts"><button class="sm" type="button" id="alertTest">Play test sound</button><button class="sm" type="button" id="alertNotif">Turn on notifications</button></div>
+            <p class="hint">Keep this page open to hear new orders. It checks for them every 20 seconds.</p>
+          </div>
+        </div>
+      </div>
     </header>
+    <div class="newalert" id="newAlert" hidden role="status" aria-live="polite"></div>
 
   <main class="amain" id="manager">
     <!-- Orders -->
     <div class="panel" id="tab-orders">
-      <div class="orow">
-        <div class="chips" id="oFilter" role="group" aria-label="Status filter"></div>
-        <button class="sm" type="button" id="oRefresh">Refresh</button>
+      <div class="kpis">
+        <button class="kpi" type="button" id="kpiCheck" data-kf="new"><span class="k">To check</span><span class="v" id="kCheck">0</span><span class="s" id="kCheckS"></span></button>
+        <button class="kpi" type="button" data-kf="prog"><span class="k">In progress</span><span class="v" id="kProg">0</span><span class="s" id="kProgS"></span></button>
+        <button class="kpi" type="button" data-kf="sent"><span class="k">Out for delivery</span><span class="v" id="kSent">0</span><span class="s" id="kSentS"></span></button>
+        <div class="kpi"><span class="k">Sales this month</span><span class="v" id="kMonth">Rs 0</span><span class="s" id="kMonthS"></span></div>
       </div>
-      <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
-      <div class="stats">
-        <div class="stat"><div class="k">New orders</div><div class="v" id="stCount">0</div></div>
-        <div class="stat"><div class="k">Awaiting advance</div><div class="v" id="stPending">0</div></div>
-        <div class="stat"><div class="k">Sales this month</div><div class="v" id="stMonth">Rs 0</div></div>
-      </div>
-      <div class="banner warn" id="ordersOff" hidden>Order storage is not connected. Create a new access token that also includes the <b id="ordersRepoName">crum-orders</b> repository, then sign in again.</div>
-      <div id="oList" class="olist"></div>
-      <details class="box" id="pasteWrap">
-        <summary><b>Add an order that came only on WhatsApp</b></summary>
-        <p class="hint">Website orders appear above automatically. For an order that came only on WhatsApp, copy the customer's full order message and paste it here. The name, phone, items and amounts fill in automatically.</p>
-        <textarea id="pasteBox" rows="4" placeholder="Crum | New Order …"></textarea>
-        <div id="pastePreview"></div>
-        <div class="two">
-          <button class="btn dark" type="button" id="pasteRead">Read message</button>
-          <button class="btn brand" type="button" id="pasteSave" disabled>Save order</button>
+      <div class="otools">
+        <div class="seg" id="oFilter" role="group" aria-label="Show orders"></div>
+        <div class="otools-r">
+          <label class="search" for="oSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="oSearch" type="search" placeholder="Search name, phone or order ID"></label>
+          <button class="ib" type="button" id="oRefresh" aria-label="Check for new orders" title="Check for new orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+          <button class="btn brand md" type="button" id="addOrderBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add order</span></button>
         </div>
-      </details>
+      </div>
+      <div class="banner warn" id="ordersOff" hidden>Order storage (<b id="ordersRepoName">crum-orders</b>) is not connected. Sign in again with your Gmail and password.</div>
+      <div id="oList" class="olist"></div>
     </div>
 
     <!-- Menu -->
@@ -340,11 +348,31 @@
   </div>
   </div>
 </div>
+<div class="scrim" id="scrim" hidden></div>
+<!-- Add an order that came only on WhatsApp -->
+<div class="modal amodal" id="pasteModal" hidden role="dialog" aria-modal="true" aria-labelledby="pasteH">
+  <div class="dhead"><h2 id="pasteH">Add a WhatsApp order</h2><button class="x" type="button" data-mclose aria-label="Close">×</button></div>
+  <div class="dbody">
+    <p class="hint">Website orders appear on their own. For an order that came only on WhatsApp, copy the customer's full order message and paste it here. The name, phone, items and amounts fill in automatically.</p>
+    <textarea id="pasteBox" rows="8" placeholder="Crum | New Order&#10;Order ID: CR-261114-K7Q4 …"></textarea>
+    <div id="pastePreview"></div>
+    <div class="two">
+      <button class="btn dark" type="button" id="pasteRead">Read message</button>
+      <button class="btn brand" type="button" id="pasteSave" disabled>Save order</button>
+    </div>
+  </div>
+</div>
+<!-- Payment screenshot viewer -->
+<div class="modal amodal lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-labelledby="lbTitle">
+  <div class="dhead"><div style="min-width:0"><h2 id="lbTitle">Payment screenshot</h2><span class="sub" id="lbSub"></span></div><button class="x" type="button" data-mclose aria-label="Close">×</button></div>
+  <div class="lb-img"><img id="lbImg" alt="Payment screenshot"></div>
+  <div class="lb-foot" id="lbFoot"></div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/themes.js?v=27"></script>
-<script src="../assets/common.js?v=27"></script>
-<script src="config.js?v=27"></script>
-<script src="admin.js?v=27"></script>
+<script src="../assets/themes.js?v=31"></script>
+<script src="../assets/common.js?v=31"></script>
+<script src="config.js?v=31"></script>
+<script src="admin.js?v=31"></script>
 </body>
 </html>

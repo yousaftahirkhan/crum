@@ -520,3 +520,23 @@ body.has-cart .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   .toast{left:12px;right:12px;transform:none;max-width:none;justify-content:space-between;text-align:left;padding:10px 10px 10px 16px;border-radius:12px}
   .toast span{flex:1}
 }
+
+/* payment screenshot at checkout (same as Giftoria Atelier) */
+.accts{display:flex;flex-direction:column;gap:8px}
+.note.small{font-size:12.5px}
+.proof-pick{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;text-align:left;border:1.5px dashed var(--brand);background:var(--soft);color:var(--ink);border-radius:14px;padding:12px 14px}
+.proof-pick svg{flex:none;color:var(--brand)}
+.proof-pick b{display:block;font-size:15px;font-weight:600}
+.proof-pick small,.proof-row small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
+.proof-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--bg)}
+.proof-row img,.proof-row .ph{width:48px;height:60px;border-radius:8px;object-fit:cover;object-position:top;background:var(--soft);display:grid;place-items:center;color:var(--brand)}
+.proof-row .pr-t{min-width:0}
+.proof-row b{font-weight:600}
+.proof-row.done{border-color:#BFDCCB;background:#F1F8F4}
+.proof-row.done b{color:#1D6F4A}
+.proof-row.error{border-color:var(--brand)}
+.proof-row.error b{color:var(--brand)}
+.proof-row .sm{min-height:40px}
+.proof-skip{font-size:13px;text-align:left;margin-top:8px;padding:6px 0}
+.spin{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--brand);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}

@@ -25,9 +25,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" id="fonts-poppins" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=28">
-<link rel="stylesheet" href="assets/store.css?v=28">
-<script src="assets/themes.js?v=28"></script>
+<link rel="stylesheet" href="assets/base.css?v=31">
+<link rel="stylesheet" href="assets/store.css?v=31">
+<script src="assets/themes.js?v=31"></script>
 </head>
 <body>
 <a class="skip" href="#menu">Skip to the menu</a>
@@ -245,6 +245,9 @@
     <div class="paybox" id="checkoutPay">
       <div class="r"><b id="cpLbl">Payment</b><b id="cpAmt"></b></div>
       <p class="note" id="cpNote"></p>
+      <div class="accts" id="cpAccts" hidden></div>
+      <div class="proof" id="proofBox" hidden></div>
+      <input type="file" id="fProof" accept="image/*" hidden>
       <ul class="safe" id="cpSafe"></ul>
     </div>
   </div>
@@ -263,7 +266,7 @@
     <div class="r"><span>Delivery</span><span id="tDel"></span></div>
     <div class="r big"><span>Total</span><span id="tTot">Rs 0</span></div>
     <div class="r" id="tAdvRow" hidden><span id="tAdvLbl">Advance</span><span id="tAdv"></span></div>
-    <div class="r" id="tRestRow" hidden><span>Balance on delivery</span><span id="tRest"></span></div>
+    <div class="r" id="tRestRow" hidden><span>Remaining, after the photo</span><span id="tRest"></span></div>
     <div class="r" id="tCodRow" hidden><span>Payment</span><span>Cash on delivery</span></div>
     <p class="note" id="tHint" hidden></p>
     <button class="btn brand block" type="button" id="checkoutBtn">Checkout</button>
@@ -296,8 +299,8 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="assets/config.js?v=28"></script>
-<script src="assets/common.js?v=28"></script>
-<script src="assets/store.js?v=28"></script>
+<script src="assets/config.js?v=31"></script>
+<script src="assets/common.js?v=31"></script>
+<script src="assets/store.js?v=31"></script>
 </body>
 </html>

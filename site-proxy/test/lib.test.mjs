@@ -3,6 +3,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {b64url, verifyGoogleIdToken, totpAt, checkTotp, makeSession, readSession, appJwt, b64urlToBytes, hashPassword, verifyPassword, passwordOk} from "../lib/lib.js";
 
+test("payment screenshots: recent order IDs and real images only", async () => {
+  const {recentOrderNo, imageKind, randomId} = await import("../lib/lib.js");
+  const now = Date.UTC(2026, 10, 14, 12);
+  assert.equal(recentOrderNo("CR-261114-K7Q4", now), true);
+  assert.equal(recentOrderNo("CR-261101-K7Q4", now), false, "too old");
+  assert.equal(recentOrderNo("CR-261120-K7Q4", now), false, "in the future");
+  assert.equal(recentOrderNo("CR-SAMPLE-1", now), false);
+  assert.equal(imageKind(btoa("\xFF\xD8\xFF\xE0" + "x".repeat(20))), "jpg");
+  assert.equal(imageKind(btoa("\x89PNG\r\n\x1a\n" + "x".repeat(20))), "png");
+  assert.equal(imageKind(btoa("<html><body>not an image</body></html>")), "");
+  assert.match(randomId(6), /^[a-z2-9]{6}$/);
+});
+
 test("passwords: hash, verify and reject", async () => {
   const h = await hashPassword("Crum-dessert-2026");
   assert.match(h, /^pbkdf2\$100000\$[\w-]+\$[\w-]+$/);

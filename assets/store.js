@@ -338,14 +338,15 @@ const TRUST_ICONS = [
 function renderTrust() {
   const set = advSetting(S), from = advFrom(S), wa = S.shop.wa;
   const title = ((S.pay.accounts || []).find(a => a && a.active !== false && String(a.number || "").trim() && String(a.title || "").trim()) || {}).title;
-  const pts = [["Nothing to pay at checkout", "Place your order here first. We confirm it with you on WhatsApp before anything is paid."]];
+  const pts = [];
   if (!set) pts.push(["Cash on delivery", "Pay for your order in cash when it arrives at your door."]);
   else {
     if (from) pts.push([`Cash on delivery under ${rs(from)}`, "Single servings and tubs are paid in cash when they arrive."]);
-    pts.push([from ? `${set >= 100 ? "Advance" : set + "% advance"} for larger orders` : `${set >= 100 ? "Advance" : set + "% advance"} after we confirm`,
-      `${from ? `Orders of ${rs(from)} or more, such as a Dawat Serving, are prepared especially for you. ` : ""}We ask for the ${advName(set)} only after we accept your order${set < 100 ? ", and the balance is paid on delivery" : ""}.`]);
-    pts.push(["Official accounts only", `${wa ? `We message only from ${wa}` : "We share our account details only in our WhatsApp chat"}${title ? ` and accept payment only to accounts in the name of ${String(title).trim()}` : ""}. If we cannot deliver, your advance is refunded in full.`]);
+    pts.push([from ? `${set >= 100 ? "Payment" : set + "% advance"} for larger orders` : `${set >= 100 ? "Payment" : set + "% advance"} at checkout`,
+      `${from ? `Orders of ${rs(from)} or more, such as a Dawat Serving, are prepared especially for you. ` : ""}Pay the ${advName(set)} at checkout and upload the screenshot.${set < 100 ? " You pay the rest after you have seen a photo of your ready order." : ""}`]);
+    pts.push(["Official accounts only", `Pay only to the accounts shown at checkout${title ? `, in the name of ${String(title).trim()}` : ""}. If we cannot deliver on your date, your payment is refunded in full.`]);
   }
+  pts.push(["Confirmed on WhatsApp", `${wa ? `We confirm every order and payment from ${wa}` : "We confirm every order and payment on WhatsApp"}, with your order ID. We never ask for your PIN or OTP.`]);
   $("trust").innerHTML = pts.map(([t, x], i) => `<div class="tr"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TRUST_ICONS[i % 4]}</svg></span><b>${esc(t)}</b><span>${esc(x)}</span></div>`).join("");
 }
 function refresh() { renderShop(); renderCart(); if (!$("pModal").hidden && PM.pid) openProduct(PM.pid, PM.sid, true) }
@@ -372,7 +373,7 @@ function renderCart() {
     : `<div class="empty">Your cart is empty.<br><button class="link" type="button" data-go="all" style="margin-top:8px">Browse the menu</button></div>`;
   $("tSub").textContent = rs(t.sub); $("tDel").textContent = t.del ? rs(t.del) : "Paid to rider"; $("tTot").textContent = rs(t.tot);
   $("tAdvRow").hidden = $("tRestRow").hidden = !t.pct || t.pct >= 100;
-  $("tAdvLbl").textContent = `${t.pct}% advance (after we accept)`; $("tAdv").textContent = rs(t.adv); $("tRest").textContent = rs(t.rest);
+  $("tAdvLbl").textContent = `${t.pct}% advance, paid at checkout`; $("tAdv").textContent = rs(t.adv); $("tRest").textContent = rs(t.rest);
   $("tCodRow").hidden = !!t.pct || !keys.length;
   const set = advSetting(S), from = advFrom(S);
   $("tHint").textContent = !keys.length || !set || !from ? "" : t.pct ? `Orders of ${rs(from)} or more are confirmed with a ${advName(set)}.` : `Cash on delivery for orders under ${rs(from)}.`;
@@ -387,15 +388,65 @@ function fillAreaField() {
 }
 { const d = load("crum-cust", {}); ["fName", "fPhone", "fAddr", "fAreaTxt"].forEach(k => { if (d[k]) $(k).value = d[k] }) }
 const areaValue = () => areas().length ? ($("fArea").value === "Other" ? "" : $("fArea").value) : $("fAreaTxt").value.trim();
-/* Customers pay only after the shop accepts the order on WhatsApp; the acceptance message carries the account details. */
 const payWord = pct => pct >= 100 ? "full payment" : pct + "% advance";
+/* ---------- checkout payment: amount, accounts, the customer's screenshot and our promises ----------
+   The same flow as Giftoria Atelier: for an order that needs an advance, the customer pays to one of our accounts and
+   adds the payment screenshot. It uploads as soon as it is chosen (while they finish the form) and is saved privately
+   for the super admin under a draft order ID, so "Place order" can open WhatsApp straight away. Smaller orders are
+   cash on delivery. */
+let DRAFT_NO = null, PROOF = {state: "none"}, proofSeq = 0;
+const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+const draftNo = () => DRAFT_NO || (DRAFT_NO = makeOrderNo(S.shop.name));
+const proofNeeded = t => !!(t.pct && payAccounts(S).length);
+const ICON_IMG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>`;
+const acctHtml = (acc, pre) => acc.map((a, i) => `<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="${pre}${i}">${esc(a.v)}</div>${a.who ? `<div class="sub">Account title: <b>${esc(a.who)}</b></div>` : ""}</div><button class="sm" type="button" data-copy="${pre}${i}">Copy</button></div>`).join("")
+  + (acc.some(a => a.who) ? `<p class="note small">Your payment app shows the account title before you confirm. Check that it matches.</p>` : "");
 function renderCheckoutPay(t) {
-  const from = advFrom(S);
-  $("cpLbl").textContent = !t.pct ? "Cash on delivery" : t.pct >= 100 ? "Full payment" : `${t.pct}% advance`;
+  const acc = payAccounts(S), part = t.pct > 0 && t.pct < 100;
+  $("cpLbl").textContent = !t.pct ? "Cash on delivery" : part ? `Pay ${t.pct}% advance now` : "Pay in full now";
   $("cpAmt").textContent = rs(t.pct ? t.adv : t.tot);
-  $("cpNote").textContent = !t.pct ? "You pay in cash when your order arrives."
-    : `Nothing to pay now. We accept your order on WhatsApp first, then share our account details for the ${payWord(t.pct)}.${from ? ` Orders of ${rs(from)} or more are prepared especially for you, which is why we ask for it.` : ""}${t.rest > 0 ? ` The balance of ${rs(t.rest)} is paid on delivery.` : ""}`;
+  $("cpNote").innerHTML = !t.pct ? "You pay in cash when your order arrives."
+    : (acc.length ? `Send <b>${rs(t.adv)}</b> to any one account below, then upload the screenshot.` : "We will send our payment details on WhatsApp.")
+      + (part ? ` The remaining <b>${rs(t.rest)}</b> is paid after we send you a photo of your ready order.` : "");
+  $("cpAccts").hidden = !t.pct || !acc.length; $("cpAccts").innerHTML = t.pct ? acctHtml(acc, "cpv") : "";
+  $("proofBox").hidden = !proofNeeded(t); if (proofNeeded(t)) renderProof();
   $("cpSafe").innerHTML = safetyLines(S, t.pct > 0).map(l => `<li>${esc(l)}</li>`).join("");
+}
+function renderProof() {
+  const p = PROOF, pic = p.url ? `<img src="${esc(p.url)}" alt="Your payment screenshot">` : `<span class="ph">${ICON_IMG}</span>`;
+  if (p.state === "none") { $("proofBox").innerHTML = `<button type="button" class="proof-pick" data-proof="pick">${ICON_IMG}<span><b>Upload payment screenshot</b><small>After paying, take a screenshot of the confirmation and add it here.</small></span></button>`; return }
+  if (p.state === "skip") { $("proofBox").innerHTML = `<div class="proof-row"><span class="ph">${ICON_IMG}</span><div class="pr-t"><b>Screenshot on WhatsApp</b><small>Send it in our WhatsApp chat after placing your order.</small></div><button type="button" class="sm" data-proof="pick">Upload now</button></div>`; return }
+  const T = {busy: ["Uploading your screenshot…", "Please keep this page open."], done: ["Screenshot uploaded", "We check it before confirming your order."], error: ["Upload failed", p.err || "Check your connection and try again."]}[p.state];
+  $("proofBox").innerHTML = `<div class="proof-row ${p.state}">${pic}<div class="pr-t"><b>${T[0]}</b><small>${esc(T[1])}</small></div>${p.state === "busy" ? `<span class="spin" aria-hidden="true"></span>` : `<button type="button" class="sm" data-proof="pick">${p.state === "done" ? "Change" : "Try again"}</button>`}</div>`
+    + (p.state === "error" ? `<button type="button" class="link proof-skip" data-proof="skip">Can't upload? Send the screenshot on WhatsApp instead</button>` : "");
+}
+$("proofBox").addEventListener("click", e => { const b = e.target.closest("[data-proof]"); if (!b) return;
+  if (b.dataset.proof === "pick") { $("fProof").value = ""; $("fProof").click() }
+  else if (b.dataset.proof === "skip") { proofSeq++; PROOF = {state: "skip"}; renderProof(); setMsg("msg", "") } });
+$("fProof").addEventListener("change", () => { const f = $("fProof").files[0]; if (f) uploadProof(f) });
+async function uploadProof(file) {
+  const id = ++proofSeq, no = draftNo();
+  if (PROOF.url) URL.revokeObjectURL(PROOF.url);
+  PROOF = {state: "busy"}; renderProof(); setMsg("msg", "");
+  try {
+    let b = await toJpeg(file, 1600, .82); if (b.size > 900000) b = await toJpeg(file, 1200, .72);
+    if (id !== proofSeq) return;
+    PROOF.url = URL.createObjectURL(b); renderProof();
+    let d;
+    if (LOCAL || EMBED) d = {path: `proofs/${no}-preview.jpg`};   /* the local preview never uploads */
+    else {
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 45000);
+      let r; try { r = await fetch(CFG.orderApi.replace(/\/$/, "") + "/proof", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({no, image: await blobB64(b)}), signal: ctl.signal}) } finally { clearTimeout(tm) }
+      d = await r.json().catch(() => ({})); if (!r.ok || !d.path) throw new Error(d.error || "upload");
+    }
+    if (id !== proofSeq) return;
+    PROOF = {state: "done", url: PROOF.url, path: d.path, no};
+  } catch (e) {
+    if (id !== proofSeq) return;
+    const m = e && e.message;
+    PROOF = {state: "error", url: PROOF.url, err: m === "decode" ? "This file could not be opened. Please choose a JPG or PNG screenshot." : m === "too_large" ? "This image is too large. Please choose the screenshot again." : m === "too_many" ? "Too many uploads. Please wait a few minutes and try again." : "Check your connection and try again."};
+  }
+  renderProof();
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (!b) return; const el = $(b.dataset.copy);
   navigator.clipboard.writeText(el.textContent).then(() => toast("Account number copied")).catch(() => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Number selected. Copy it manually.") }) });
@@ -404,7 +455,8 @@ let ORDER = null;
 function buildOrder() {
   const t = totals();
   const its = Object.entries(cart).map(([k, q]) => { const {p, s} = findLine(S, k); return {name: `${p.name} (${s.name})`, qty: q, price: s.price} });
-  return {no: makeOrderNo(S.shop.name), items: its, ...t, name: $("fName").value.trim(), phone: $("fPhone").value.trim(), city: S.shop.city || "",
+  const no = draftNo();
+  return {no, items: its, ...t, proof: PROOF.state === "done" && PROOF.no === no ? PROOF.path : "", proofLater: PROOF.state === "skip", name: $("fName").value.trim(), phone: $("fPhone").value.trim(), city: S.shop.city || "",
     area: areaValue(), addr: $("fAddr").value.trim(), need: $("fDate").value, needTxt: `${fmtDate($("fDate").value)}, ${$("fTime").value}`, note: $("fNote").value.trim()};
 }
 /* The super admin reads this exact message format back in (Orders → Add an order that came only on WhatsApp). */
@@ -414,8 +466,11 @@ function orderText(o) {
   o.items.forEach(i => L.push(`• ${i.name} × ${i.qty} — ${rs(i.price * i.qty)}`));
   if (o.del) L.push(`Delivery: ${rs(o.del)}`);
   L.push("", `*Total: ${rs(o.tot)}*`);
-  if (o.pct) { L.push(o.pct >= 100 ? `Full payment in advance: ${rs(o.adv)}` : `Advance (${o.pct}%): ${rs(o.adv)}`); if (o.rest > 0) L.push(`Balance on delivery: ${rs(o.rest)}`) }
-  else L.push("Payment: cash on delivery");
+  if (o.pct) {
+    if (o.pct >= 100) L.push(`${o.proof ? "Paid in full" : "Full payment"}: ${rs(o.adv)}`);
+    else L.push(`Advance${o.proof ? " paid" : ""} (${o.pct}%): ${rs(o.adv)}`, `Remaining after the photo: ${rs(o.rest)}`);
+    if (o.proof) L.push("Payment screenshot: uploaded with the order"); else if (o.proofLater) L.push("Payment screenshot: I will send it in this chat");
+  } else L.push("Payment: cash on delivery");
   L.push("", "*Delivery details*", `Name: ${o.name}`, `Phone: ${o.phone}`, ...(o.city ? [`City: ${o.city}`] : []), ...(o.area ? [`Area: ${o.area}`] : []), `Address: ${o.addr}`);
   if (!o.del) L.push("Delivery fare: paid to the rider");
   if (o.need) L.push(`Needed by: ${o.needTxt || fmtDate(o.need)}`);
@@ -431,6 +486,11 @@ function check() {
   if (areas().length ? !$("fArea").value : !$("fAreaTxt").value.trim()) return "Please enter your area.";
   if (!$("fAddr").value.trim()) return "Please enter your delivery address.";
   if (!$("fDate").value) return "Please choose the date you need your order.";
+  const t = totals();
+  if (proofNeeded(t)) {
+    if (PROOF.state === "busy") return "Your screenshot is still uploading. Please wait a moment.";
+    if (PROOF.state !== "done" && PROOF.state !== "skip") return `Please pay ${rs(t.adv)} and upload the payment screenshot.`;
+  }
   return "";
 }
 function showPay() {
@@ -442,24 +502,29 @@ function showPay() {
     <div class="r" style="font-weight:800"><span>Total</span><span>${rs(o.tot)}</span></div>
     <div class="r sub"><span>${esc(o.name)} · ${esc(o.phone)}</span><span>${esc(o.area || o.city)}</span></div>
     ${o.need ? `<div class="r sub"><span>Needed on</span><span>${esc(o.needTxt)}</span></div>` : ""}`;
+  const acc = payAccounts(S), part = o.pct > 0 && o.pct < 100;
   $("payBig").hidden = false;
-  $("payBig").innerHTML = o.pct ? `<div class="sub">${o.pct >= 100 ? "Full payment" : o.pct + "% advance"}, after we accept your order</div><div class="amt">${rs(o.adv)}</div>${o.rest > 0 ? `<div class="sub">Balance ${rs(o.rest)} on delivery</div>` : ""}`
-    : `<div class="sub">Cash on delivery</div><div class="amt">${rs(o.tot)}</div><div class="sub">Nothing to pay now</div>`;
-  $("accts").innerHTML = `<ul class="safe">${safetyLines(S, o.pct > 0).slice(1).map(l => `<li>${esc(l)}</li>`).join("")}</ul>`;
-  $("payNote").textContent = hasWa ? (o.pct ? `Your WhatsApp chat with us has opened with this order. Tap Send there. We will accept your order in the same chat and then share our account details for the ${payWord(o.pct)}.` : "Your WhatsApp chat with us has opened with this order. Tap Send there. We will confirm it in the same chat, and you pay when it arrives.")
-    : o.pct ? "Your order has been received. We will contact you on your phone number to accept it and share the payment details." : "Your order has been received. We will contact you on your phone number to confirm it. You pay when it arrives.";
+  $("payBig").innerHTML = !o.pct ? `<div class="sub">Cash on delivery</div><div class="amt">${rs(o.tot)}</div><div class="sub">Nothing to pay now</div>`
+    : o.proof ? `<div class="sub">${part ? `${o.pct}% advance paid` : "Paid in full"} · screenshot received</div><div class="amt">${rs(o.adv)}</div>${o.rest > 0 ? `<div class="sub">Remaining ${rs(o.rest)} after we send you a photo of your ready order</div>` : ""}`
+    : `<div class="sub">${part ? `Send the ${o.pct}% advance` : "Send the full payment"}</div><div class="amt">${rs(o.adv)}</div>${o.rest > 0 ? `<div class="sub">Remaining ${rs(o.rest)} after the photo of your ready order</div>` : ""}`;
+  $("accts").innerHTML = o.pct && !o.proof && acc.length ? acctHtml(acc, "acv") : `<ul class="safe">${safetyLines(S, o.pct > 0).slice(1).map(l => `<li>${esc(l)}</li>`).join("")}</ul>`;
+  $("payNote").textContent = !hasWa ? "Your order has been received. We will contact you on your phone number to confirm it."
+    : !o.pct ? "Your WhatsApp chat with us has opened with this order. Tap Send there. We will confirm it in the same chat, and you pay when it arrives."
+    : o.proof ? "Your WhatsApp chat with us has opened with this order. Tap Send there. We check your payment and confirm your order in the same chat."
+    : "Your WhatsApp chat with us has opened with this order. Tap Send there, then pay and send the payment screenshot in the same chat. We confirm your order once we have checked the payment.";
   $("waBtn").hidden = $("copyBtn").hidden = !hasWa; $("waBtn").href = waLink(o);
   setStep("pay"); setMsg("msg2", "");
 }
 /* "Place order" is a real link: the click handler checks the form, creates the order and points the link at the
    shop's WhatsApp chat before the browser follows it, so one tap places the order and opens the chat. */
 $("confirmBtn").addEventListener("click", e => {
-  const err = check(); if (err) { e.preventDefault(); setMsg("msg", err, true); return } setMsg("msg", "");
+  const err = check(); if (err) { e.preventDefault(); setMsg("msg", err, true); if (/screenshot/.test(err)) $("checkoutPay").scrollIntoView({behavior: "smooth", block: "center"}); return } setMsg("msg", "");
   if (EMBED) { e.preventDefault(); toast("This is a preview. Orders cannot be placed here."); return }
   save("crum-cust", {fName: $("fName").value, fPhone: $("fPhone").value, fArea: $("fArea").value, fAreaTxt: $("fAreaTxt").value, fAddr: $("fAddr").value});
   ORDER = buildOrder();
   if (intl(S.shop.wa).length >= 11) $("confirmBtn").href = waLink(ORDER); else e.preventDefault();
   rememberOrder(ORDER); sendOrder(ORDER); showPay();
+  DRAFT_NO = null; proofSeq++; PROOF = {state: "none"};
 });
 $("waBtn").addEventListener("click", () => setMsg("msg2", "Opening WhatsApp. If it does not open, copy the message and send it to " + S.shop.wa + "."));
 $("copyBtn").onclick = () => navigator.clipboard.writeText(orderText(ORDER)).then(() => setMsg("msg2", "Message copied. Paste it in a WhatsApp chat with " + S.shop.wa + "."))
@@ -478,7 +543,7 @@ function setStep(s) {
 $("checkoutBtn").onclick = () => { if (!Object.keys(cart).length) { setMsg("msg", "Please add a dessert to your cart.", true); return } setStep("details"); setTimeout(() => $("fName").focus(), 50) };
 $("toCartBtn").onclick = () => setStep("cart");
 const openCart = () => { if (STEP !== "pay") setStep("cart"); show($("drawer")) };
-$("newOrderBtn").onclick = () => { cart = {}; persist(); ORDER = null; setStep("cart"); refresh(); toast("Cart cleared") };
+$("newOrderBtn").onclick = () => { cart = {}; persist(); ORDER = null; DRAFT_NO = null; proofSeq++; PROOF = {state: "none"}; setStep("cart"); refresh(); toast("Cart cleared") };
 
 /* Saves the order for the shop. WhatsApp still opens either way, so a network problem never blocks the customer. */
 function sendOrder(o) {
