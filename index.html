@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>if(location.hostname.endsWith(".github.io"))location.replace("https://crum.pages.dev/"+location.search+location.hash)</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crum | Tiramisu and Classic Lotus Crumb</title>
+<meta name="description" content="Order Tiramisu and Classic Lotus Crumb online in three sizes: Single Serving, Large Tub and Dawat Serving.">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" id="fonts-poppins" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Fredoka:wght@600;700&display=swap">
+<link rel="stylesheet" href="assets/base.css?v=23">
+<link rel="stylesheet" href="assets/store.css?v=23">
+<script src="assets/themes.js?v=23"></script>
+</head>
+<body>
+<a class="skip" href="#menu">Skip to the menu</a>
+
+<!-- Announcement bar -->
+<div class="announce" id="announceBar" hidden>
+  <div class="wrap abar">
+    <button class="ab" type="button" id="annPrev" aria-label="Previous message">‹</button>
+    <p id="announce" aria-live="polite"></p>
+    <button class="ab" type="button" id="annNext" aria-label="Next message">›</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="top" id="top">
+  <div class="wrap hbar">
+    <button class="ib only-m" type="button" id="openMenu" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <a class="logo" href="#" id="logo" aria-label="Crum home"></a>
+    <button class="loc" type="button" id="locBtn" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+      <span><small>Deliver to</small><b id="locTxt">Select area</b></span>
+    </button>
+    <nav class="nav only-d" aria-label="Main">
+      <a href="#menu" data-go="all">Menu</a>
+      <span id="navProducts"></span>
+      <a href="#menu" data-go="size:dawat">Dawat orders</a>
+      <a href="#howto">How to order</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="icons">
+      <button class="ib" type="button" id="openOrders" aria-label="My orders"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span class="count" id="orderCount" hidden>0</span></button>
+      <button class="ib" type="button" id="openCart" aria-label="Cart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="count" id="cartCount" hidden>0</span></button>
+    </div>
+  </div>
+</header>
+
+<div class="loader" id="loader">Loading the menu…</div>
+<div class="loader" id="loadErr" hidden>The menu could not load. Please check your connection and <a href="">reload the page</a>.</div>
+
+<main id="app" hidden>
+  <!-- Hero banner: text on the left, photos that change on their own on the right -->
+  <section class="hero" aria-label="Featured" aria-roledescription="carousel">
+    <div class="wrap">
+      <button class="mloc" type="button" id="locBtn2" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span class="t" id="locTxt2"></span><span class="go" aria-hidden="true">›</span></button>
+      <div class="hero-box">
+        <div class="hero-text" id="heroText" aria-live="polite"></div>
+        <div class="hero-media" id="heroMedia"></div>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick links (like a collection's sub-categories) -->
+  <nav class="wrap pills" id="pills" aria-label="Browse the menu"></nav>
+
+  <!-- Collection -->
+  <section class="wrap collection" id="menu" aria-labelledby="collTitle">
+    <div class="crumbs"><a href="#" data-go="all">Home</a> <span aria-hidden="true">/</span> <span id="crumbNow">Menu</span></div>
+    <div class="coll-head">
+      <h2 id="collTitle">Our menu</h2>
+      <p class="hint" id="collSub"></p>
+    </div>
+    <div class="coll">
+      <aside class="filters" id="filters" aria-label="Filters">
+        <div class="fhead"><b>Filters</b><button class="link" type="button" id="fClear">Clear all</button><button class="x only-m" type="button" id="fClose" aria-label="Close filters">×</button></div>
+        <fieldset><legend>Dessert</legend><div id="fProducts"></div></fieldset>
+        <fieldset><legend>Size</legend><div id="fSizes"></div></fieldset>
+        <fieldset><legend>Price</legend><div id="fPrices"></div></fieldset>
+        <fieldset><legend>Availability</legend><label class="fchk"><input type="checkbox" id="fStock"> In stock only</label></fieldset>
+        <button class="btn brand block only-m" type="button" id="fDone">Show results</button>
+      </aside>
+      <div class="results">
+        <div class="toolbar">
+          <button class="sm only-m" type="button" id="fOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Filters <span class="fn" id="fN" hidden></span></button>
+          <span class="sub" id="count"></span>
+          <label class="sort"><span class="lbl">Sort by</span>
+            <select id="sort">
+              <option value="feat">Featured</option>
+              <option value="low">Price, low to high</option>
+              <option value="high">Price, high to low</option>
+              <option value="az">Alphabetically, A–Z</option>
+            </select>
+          </label>
+        </div>
+        <div class="active-f" id="activeF"></div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Moving photo strip -->
+  <section class="strip" id="stripSec" aria-label="Our desserts">
+    <div class="wrap shead"><span class="eyebrow">From our kitchen</span><h2>Made to be shared</h2></div>
+    <div class="marquee" id="marquee"><div class="track" id="track"></div></div>
+  </section>
+
+  <!-- Why choose us -->
+  <section class="why" id="whySec">
+    <div class="wrap">
+      <span class="eyebrow">Why Crum</span><h2>A small menu, made with attention</h2>
+      <div class="why-grid" id="why"></div>
+    </div>
+  </section>
+
+  <!-- Dawat promo -->
+  <section class="wrap" id="promoSec"><div class="promo" id="promo"></div></section>
+
+  <!-- How to order -->
+  <section class="wrap howto" id="howto">
+    <span class="eyebrow">Ordering</span><h2>How to order</h2>
+    <ol class="steps" id="steps"></ol>
+  </section>
+
+  <!-- Pay with confidence -->
+  <section class="wrap trust-sec" id="trustSec">
+    <span class="eyebrow">Pay with confidence</span><h2>Order first, pay safely</h2>
+    <div class="trust" id="trust"></div>
+    <button class="link" type="button" data-policy="payment">Read our payment and safety policy</button>
+  </section>
+
+  <!-- Reviews (hidden until the owner adds one) -->
+  <section class="wrap reviews" id="revSec" hidden>
+    <span class="eyebrow">Kind words</span><h2>What customers say</h2>
+    <div class="rev-grid" id="reviews"></div>
+  </section>
+
+  <!-- Story -->
+  <section class="wrap story" id="story">
+    <div class="story-in">
+      <div class="story-art" id="storyArt"></div>
+      <div><h2 id="storyTitle"></h2><div id="storyText"></div></div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="wrap contact" id="contact">
+    <span class="eyebrow">Get in touch</span><h2>Contact us</h2>
+    <div class="cgrid" id="contactBoxes"></div>
+  </section>
+</main>
+
+<footer class="foot" id="foot" hidden>
+  <div class="wrap fgrid">
+    <div class="fabout">
+      <span class="flogo" id="footLogo"></span>
+      <p id="footAbout"></p>
+      <div class="social" id="social"></div>
+    </div>
+    <div><h3>Menu</h3><ul id="footMenu"></ul></div>
+    <div><h3>Help</h3><ul>
+      <li><button class="fl" type="button" data-policy="howto">How to order</button></li>
+      <li><button class="fl" type="button" data-policy="payment">Payments &amp; safety</button></li>
+      <li><button class="fl" type="button" data-policy="refund">Refunds &amp; cancellations</button></li>
+      <li><button class="fl" type="button" data-policy="terms">Terms &amp; conditions</button></li>
+      <li><button class="fl" type="button" data-policy="privacy">Privacy policy</button></li>
+    </ul></div>
+    <div><h3>Contact</h3><ul id="footContact"></ul></div>
+  </div>
+  <div class="wrap fbot"><span id="copy"></span><span id="regLine"></span></div>
+</footer>
+
+<a class="wa-float" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" hidden><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3 1 2.5c.1.2 1.6 2.5 3.9 3.5 1.4.6 2 .7 2.7.6.4-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.1z"/></svg></a>
+<button class="cart-float" type="button" id="cartFloat" hidden><span id="cartFloatTxt"></span></button>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- Product (choose size) -->
+<div class="modal" id="pModal" role="dialog" aria-modal="true" aria-labelledby="pmName" hidden>
+  <div class="dhead"><span class="eyebrow" id="pmKicker">Choose your size</span><button class="x" type="button" data-close aria-label="Close">×</button></div>
+  <div class="pm" id="pmBody"></div>
+</div>
+
+<!-- Delivery location -->
+<div class="modal narrow" id="locModal" role="dialog" aria-modal="true" aria-labelledby="locTitle" hidden>
+  <div class="dhead"><h2 id="locTitle">Select your delivery location</h2><button class="x" type="button" data-close aria-label="Close">×</button></div>
+  <div class="dbody form">
+    <label for="locCity">City<input id="locCity" readonly></label>
+    <label for="locArea">Area<select id="locArea"></select></label>
+    <p class="note" id="locNote"></p>
+    <button class="btn brand block" type="button" id="locSave">Save location</button>
+  </div>
+</div>
+
+<!-- Mobile menu -->
+<div class="drawer left" id="menuDrawer" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+  <div class="dhead"><span class="mlogo" id="menuLogo"></span><button class="x" type="button" data-close aria-label="Close menu">×</button></div>
+  <div class="dbody">
+    <div class="mlist" id="menuList"></div>
+    <div class="mlinks">
+      <button type="button" data-menu="howto">How to order</button>
+      <button type="button" data-menu="orders">My orders</button>
+      <button type="button" data-menu="contact">Contact us</button>
+    </div>
+    <a class="btn wa block" id="menuWa" href="#" target="_blank" rel="noopener">Chat on WhatsApp</a>
+  </div>
+</div>
+
+<!-- Cart → details → payment -->
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" hidden>
+  <div class="dhead"><h2 id="cartTitle">Your cart</h2><button class="x" type="button" data-close aria-label="Close cart">×</button></div>
+  <div class="dbody" id="cartStep">
+    <div id="lines"></div>
+  </div>
+  <div class="dbody form" id="detailsStep" hidden>
+    <button class="link" type="button" id="toCartBtn" style="align-self:start">‹ Back to cart</button>
+    <label for="fName">Full name<input id="fName" autocomplete="name" maxlength="60" placeholder="Ayesha Khan"></label>
+    <label for="fPhone">Phone (WhatsApp)<input id="fPhone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="0312 3456789"></label>
+    <label for="fArea">Area<select id="fArea"></select><input id="fAreaTxt" maxlength="80" placeholder="e.g. Model Town" hidden></label>
+    <label for="fAddr">Full address<textarea id="fAddr" rows="2" maxlength="300" placeholder="House no., street, nearby landmark"></textarea></label>
+    <div class="two">
+      <label for="fDate">Needed on<input id="fDate" type="date"></label>
+      <label for="fTime">Time<select id="fTime"><option>Any time</option><option>Morning (10am–1pm)</option><option>Afternoon (1pm–5pm)</option><option>Evening (5pm–9pm)</option></select></label>
+    </div>
+    <label for="fNote">Note (optional)<input id="fNote" maxlength="200" placeholder="e.g. Please call before arriving"></label>
+    <div class="paybox" id="checkoutPay">
+      <div class="r"><b id="cpLbl">Payment</b><b id="cpAmt"></b></div>
+      <p class="note" id="cpNote"></p>
+      <ul class="safe" id="cpSafe"></ul>
+    </div>
+  </div>
+  <div class="dbody" id="payStep" hidden>
+    <div class="receipt" id="receipt"></div>
+    <div class="paybig" id="payBig" hidden></div>
+    <div id="accts"></div>
+    <p class="note" id="payNote"></p>
+    <a class="btn wa block" id="waBtn" href="#" target="_blank" rel="noopener">Open WhatsApp chat</a>
+    <button class="btn ghost block" type="button" id="copyBtn">Copy order message</button>
+    <div class="msg" id="msg2"></div>
+    <button class="link" type="button" id="newOrderBtn" style="align-self:center">Start a new order</button>
+  </div>
+  <div class="tots" id="cartTotals">
+    <div class="r"><span>Subtotal</span><span id="tSub">Rs 0</span></div>
+    <div class="r"><span>Delivery</span><span id="tDel"></span></div>
+    <div class="r big"><span>Total</span><span id="tTot">Rs 0</span></div>
+    <div class="r" id="tAdvRow" hidden><span id="tAdvLbl">Advance</span><span id="tAdv"></span></div>
+    <div class="r" id="tRestRow" hidden><span>Balance on delivery</span><span id="tRest"></span></div>
+    <div class="r" id="tCodRow" hidden><span>Payment</span><span>Cash on delivery</span></div>
+    <p class="note" id="tHint" hidden></p>
+    <button class="btn brand block" type="button" id="checkoutBtn">Checkout</button>
+    <a class="btn brand block" id="confirmBtn" href="#" target="_blank" rel="noopener" hidden>Place order</a>
+    <p class="note" id="confirmNote" hidden>Placing the order opens WhatsApp with your order ready to send.</p>
+    <div class="msg" id="msg" role="alert"></div>
+  </div>
+</div>
+
+<!-- My orders (this device) -->
+<div class="drawer" id="ordersDrawer" role="dialog" aria-modal="true" aria-labelledby="ordersTitle" hidden>
+  <div class="dhead"><h2 id="ordersTitle">My orders</h2><button class="x" type="button" data-close aria-label="Close">×</button></div>
+  <div class="dbody" id="ordersBody"></div>
+</div>
+
+<!-- Policies -->
+<div class="modal narrow" id="polModal" role="dialog" aria-modal="true" aria-labelledby="polTitle" hidden>
+  <div class="dhead"><h2 id="polTitle"></h2><button class="x" type="button" data-close aria-label="Close">×</button></div>
+  <div class="dbody pol" id="polBody"></div>
+</div>
+
+<!-- Colour theme preview (only with ?themes in the address, or when the super admin previews a theme) -->
+<div class="tpanel" id="tPanel" hidden>
+  <div class="tp-head"><b>Theme preview</b><button class="x" type="button" id="tpMin" aria-label="Hide theme preview">–</button></div>
+  <div class="tp-sub">Colours</div>
+  <div class="tp-list" id="tpList"></div>
+  <div class="tp-sub">Font style</div>
+  <div class="tp-list fonts" id="tpFonts"></div>
+  <p class="tp-note">Only you see this preview. To change the website's colours, choose a theme in the super admin and publish.</p>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="assets/config.js?v=23"></script>
+<script src="assets/common.js?v=23"></script>
+<script src="assets/store.js?v=23"></script>
+</body>
+</html>

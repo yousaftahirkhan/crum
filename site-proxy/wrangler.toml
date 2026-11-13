@@ -1,0 +1,20 @@
+# Cloudflare Pages project "crum": https://crum.pages.dev
+#   functions/[[path]].js      forwards the website (and /admin/) from GitHub Pages
+#   functions/api/[[route]].js sign-in and order service (lib/auth.js)
+# Deploy: npx wrangler pages deploy public --project-name crum --branch main   (run in this folder)
+# Secrets (set with `npx wrangler pages secret put NAME --project-name crum`, never stored here):
+#   GITHUB_CLIENT_SECRET, GITHUB_APP_PRIVATE_KEY (PKCS#8), TOTP_SECRET, SESSION_SECRET, ALLOWED_EMAILS
+name = "crum"
+pages_build_output_dir = "public"
+compatibility_date = "2026-06-01"
+
+[vars]
+ADMIN_URL = "https://crum.pages.dev/admin/"
+SITE_ORIGINS = "https://crum.pages.dev"
+ALLOWED_USERS = "yousaftahirkhan"
+REPO_OWNER = "yousaftahirkhan"
+SITE_REPO = "crum"
+ORDERS_REPO = "crum-orders"
+SESSION_VERSION = "1"
+GOOGLE_CLIENT_ID = "1053200574750-jp3u1ddiobmnlsh4pnh3tvp5fcpb0i9d.apps.googleusercontent.com"
+GITHUB_CLIENT_ID = ""

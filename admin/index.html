@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en" data-base="../">
+<head>
+<meta charset="utf-8">
+<script>if(location.hostname.endsWith(".github.io"))location.replace("https://crum.pages.dev/admin/"+location.hash)</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Super Admin | Crum</title>
+<meta name="theme-color" content="#2B1510">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Open+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600&family=Poppins:wght@400;500;600&family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500;600&family=Libre+Baskerville&family=Nunito+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,400&family=Manrope:wght@400;500&family=Fredoka:wght@600;700&display=swap">
+<link rel="stylesheet" href="../assets/base.css?v=23">
+<link rel="stylesheet" href="admin.css?v=23">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<!-- Sign in -->
+<section class="signin" id="signin" hidden>
+  <div class="scard">
+    <div class="slogo"><span class="logoArt"></span></div>
+    <div>
+      <div class="eyebrow">Super admin</div>
+      <h1>Sign in to manage Crum</h1>
+      <p class="hint" style="margin-top:6px">Orders, the menu, the homepage, colours, business details and payments are managed here. Customers never see this page.</p>
+    </div>
+    <div class="form" id="gSignin">
+      <div id="gStep1" class="form">
+        <div class="eyebrow" style="text-align:center">Step 1 of 2</div>
+        <div id="gBtn" class="gbtn"></div>
+        <p class="hint" style="text-align:center">Sign in with the shop's Google account.</p>
+      </div>
+      <form class="form" id="gStep2" hidden autocomplete="off" novalidate>
+        <div class="eyebrow">Step 2 of 2</div>
+        <p class="hint">Signed in as <b id="gEmail"></b>. Enter the 6-digit code from your authenticator app.</p>
+        <label for="otp">Authenticator code<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
+        <label class="toggle" for="trust"><input type="checkbox" id="trust"> Keep me signed in on this device for 30 days</label>
+        <button class="btn brand block" type="submit" id="otpBtn">Verify and sign in</button>
+        <button class="link" type="button" id="gRestart" style="align-self:center">Use a different Google account</button>
+      </form>
+      <div class="msg err" id="gMsg" role="alert"></div>
+    </div>
+    <details class="help" id="otherWays">
+      <summary>Other ways to sign in</summary>
+      <div class="form" id="ghSignin" style="margin-top:12px">
+        <button class="btn dark block" type="button" id="ghBtn"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.530-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Sign in with GitHub</button>
+        <p class="hint" style="text-align:center">GitHub asks for your password and its own authenticator code. You stay signed in for 8 hours.</p>
+        <div class="msg err" id="ghMsg" role="alert"></div>
+      </div>
+      <form class="form sep" id="signinForm" autocomplete="off" style="margin-top:14px">
+        <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="github_pat_…" required></label>
+        <label class="toggle" for="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this device</label>
+        <button class="btn ghost block" type="submit" id="signBtn">Sign in with token</button>
+        <div class="msg err" id="signMsg" role="alert"></div>
+      </form>
+      <details class="help" style="margin-top:12px">
+        <summary>How to get an access token</summary>
+        <ol>
+          <li>Sign in to GitHub with the shop's account and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">New fine-grained token</a>.</li>
+          <li>Name it <b>Crum admin</b> and choose an expiry date.</li>
+          <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b id="hRepo">crum</b> and <b id="hOrders">crum-orders</b>.</li>
+          <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
+          <li>Select <b>Generate token</b>, copy it and paste it above.</li>
+        </ol>
+        <p class="hint">Keep the token private. Anyone who has it can change the website. If it is lost or shared, delete it on GitHub and create a new one.</p>
+      </details>
+    </details>
+  </div>
+</section>
+
+<div class="booting" id="booting">Loading…</div>
+
+<!-- Admin app: side panel + page -->
+<div id="app" class="shell" hidden>
+  <aside class="side" id="side" aria-label="Super admin">
+    <div class="sbrand"><span class="logoArt"></span><span class="role">Super admin</span></div>
+    <nav class="snav" role="tablist" aria-orientation="vertical" aria-label="Sections">
+        <button class="tab" role="tab" data-tab="orders" aria-selected="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span>Orders</span><span class="nb" id="navNew" hidden>0</span></button>
+        <button class="tab" role="tab" data-tab="menu" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1.4 10.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8z"/><path d="M4 9h16M9 5.5c0-1 1-1.5 3-1.5s3 .5 3 1.5"/></svg><span>Menu</span></button>
+        <button class="tab" role="tab" data-tab="home" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/></svg><span>Homepage</span></button>
+        <button class="tab" role="tab" data-tab="theme" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 20.5c-1.5 0-2-1-2-2s1-1.7 2.2-1.7H14a3 3 0 0 0 3-3"/></svg><span>Colours &amp; fonts</span></button>
+        <button class="tab" role="tab" data-tab="business" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M4 20h16"/></svg><span>Business info</span></button>
+        <button class="tab" role="tab" data-tab="pay" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Payment &amp; delivery</span></button>
+    </nav>
+    <div class="sfoot">
+      <a class="sitem" id="viewSite" href="../" target="_blank" rel="noopener"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>View website</a>
+      <button class="sitem" type="button" id="signOut"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>Sign out</button>
+      <div class="who" id="whoAmI"></div>
+    </div>
+  </aside>
+  <div class="side-scrim" id="sideScrim" hidden></div>
+  <div class="page">
+    <div class="demo" id="demoBar" hidden>Local preview on this computer. Nothing is saved or published from here.</div>
+    <header class="ptop">
+      <button class="menu-btn" type="button" id="sideOpen" aria-label="Open the side panel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div><h1 id="pageTitle">Orders</h1><p class="hint" id="pageSub"></p></div>
+    </header>
+
+  <main class="amain" id="manager">
+    <!-- Orders -->
+    <div class="panel" id="tab-orders">
+      <div class="orow">
+        <div class="chips" id="oFilter" role="group" aria-label="Status filter"></div>
+        <button class="sm" type="button" id="oRefresh">Refresh</button>
+      </div>
+      <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
+      <div class="stats">
+        <div class="stat"><div class="k">New orders</div><div class="v" id="stCount">0</div></div>
+        <div class="stat"><div class="k">Awaiting advance</div><div class="v" id="stPending">0</div></div>
+        <div class="stat"><div class="k">Sales this month</div><div class="v" id="stMonth">Rs 0</div></div>
+      </div>
+      <div class="banner warn" id="ordersOff" hidden>Order storage is not connected. Create a new access token that also includes the <b id="ordersRepoName">crum-orders</b> repository, then sign in again.</div>
+      <div id="oList" class="olist"></div>
+      <details class="box" id="pasteWrap">
+        <summary><b>Add an order that came only on WhatsApp</b></summary>
+        <p class="hint">Website orders appear above automatically. For an order that came only on WhatsApp, copy the customer's full order message and paste it here. The name, phone, items and amounts fill in automatically.</p>
+        <textarea id="pasteBox" rows="4" placeholder="Crum | New Order …"></textarea>
+        <div id="pastePreview"></div>
+        <div class="two">
+          <button class="btn dark" type="button" id="pasteRead">Read message</button>
+          <button class="btn brand" type="button" id="pasteSave" disabled>Save order</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- Menu -->
+    <div class="panel" id="tab-menu" hidden>
+      <div class="box" id="pEditor" hidden>
+        <h3 id="pEdTitle">New dessert</h3>
+        <div class="pform">
+          <label class="drop" for="pPhoto" id="pDrop"><span id="pDropTxt">Main photo<br><small style="font-weight:600">tap to upload</small></span><input type="file" id="pPhoto" accept="image/*"></label>
+          <div class="form">
+            <label for="pName">Dessert name<input id="pName" maxlength="40" placeholder="Tiramisu"></label>
+            <label for="pLine">Short line (shown under the name)<input id="pLine" maxlength="110" placeholder="Coffee-soaked sponge fingers, smooth cream and cocoa."></label>
+            <label for="pDesc">About this dessert<textarea id="pDesc" rows="3" maxlength="500"></textarea></label>
+            <div class="three">
+              <label for="pIng">Ingredients<textarea id="pIng" rows="2" maxlength="400" placeholder="Leave blank to hide"></textarea></label>
+              <label for="pAll">Allergens<textarea id="pAll" rows="2" maxlength="200" placeholder="e.g. Contains milk, egg and wheat"></textarea></label>
+              <label for="pSto">Storage<textarea id="pSto" rows="2" maxlength="200"></textarea></label>
+            </div>
+            <div class="checks">
+              <label class="toggle" for="pBest"><input type="checkbox" id="pBest"> Bestseller badge</label>
+              <label class="toggle" for="pIsNew"><input type="checkbox" id="pIsNew"> "New" badge</label>
+              <label class="toggle" for="pOut"><input type="checkbox" id="pOut"> Sold out (all sizes)</label>
+            </div>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="szhead"><b>Sizes and prices</b><button class="sm" type="button" id="szAdd">+ Add size</button></div>
+          <p class="hint">Each size appears as its own item on the menu. Sizes with the same name across desserts share one filter, for example "Dawat Serving".</p>
+          <div id="szRows"></div>
+        </div>
+        <div class="two" style="max-width:460px">
+          <button class="btn brand" type="button" id="pSave">✓ Save dessert</button>
+          <button class="btn ghost" type="button" id="pCancel">Cancel</button>
+        </div>
+        <div class="msg err" id="pMsg" style="text-align:left"></div>
+      </div>
+      <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3>Menu (<span id="pCount">0</span> desserts)</h3>
+          <button class="btn dark" type="button" id="pNewBtn">+ New dessert</button>
+        </div>
+        <p class="hint">Change a price or mark a size sold out right here, then select <b>Publish changes</b>.</p>
+        <div id="pList"></div>
+      </div>
+    </div>
+
+    <!-- Homepage -->
+    <div class="panel" id="tab-home" hidden>
+      <div class="box">
+        <h3>Announcement bar</h3>
+        <p class="hint">Messages rotate at the top of every page. Leave a line blank to remove it.</p>
+        <div id="annEd" class="form"></div>
+      </div>
+      <div class="box">
+        <h3>Banner slides (3)</h3>
+        <p class="hint">Leave a heading blank to hide that slide.</p>
+        <div id="slideEd" style="display:flex;flex-direction:column;gap:14px"></div>
+      </div>
+      <div class="box">
+        <h3>Why choose us (3 points)</h3>
+        <div id="whyEd" class="form"></div>
+      </div>
+      <div class="box">
+        <h3>Dawat banner</h3>
+        <div class="two">
+          <label class="fld" for="b-pt">Heading<input id="b-pt" data-b="promo.title" maxlength="60"></label>
+          <label class="fld" for="b-pb">Button<input id="b-pb" data-b="promo.btn" maxlength="24"></label>
+        </div>
+        <label class="fld" for="b-px">Text<textarea id="b-px" data-b="promo.text" rows="2" maxlength="220"></textarea></label>
+        <label class="fld" for="b-pg">Button opens<select id="b-pg" data-b="promo.go" data-goes></select></label>
+        <div class="phrow"><span class="thumb" data-thumb="promo.photo"></span><label class="sm">Change photo<input type="file" accept="image/*" data-ph="promo.photo"></label><button class="sm red" type="button" data-phrm="promo.photo">Remove</button></div>
+      </div>
+      <div class="box">
+        <h3>Reviews</h3>
+        <p class="hint">Add only genuine customer reviews, for example from WhatsApp or Instagram. This section stays hidden on the website until you add one.</p>
+        <div data-list="reviews"></div>
+        <button class="sm" type="button" data-ladd="reviews" style="align-self:start">+ Add review</button>
+      </div>
+      <div class="box">
+        <h3>About us</h3>
+        <label class="fld" for="b-at">Heading<input id="b-at" data-b="about.title" maxlength="70"></label>
+        <label class="fld" for="b-ax">Text (leave an empty line between paragraphs)<textarea id="b-ax" data-b="about.text" rows="5" maxlength="900"></textarea></label>
+        <div class="phrow"><span class="thumb" data-thumb="about.photo"></span><label class="sm">Change photo<input type="file" accept="image/*" data-ph="about.photo"></label><button class="sm red" type="button" data-phrm="about.photo">Remove</button><span class="hint">Without a photo, the Crum logo is shown.</span></div>
+      </div>
+    </div>
+
+    <!-- Colour theme -->
+    <div class="panel" id="tab-theme" hidden>
+      <div class="box">
+        <h3>Colour theme</h3>
+        <p class="hint">Select <b>Preview</b> to see the whole website in a theme below. When you like one, select <b>Use this theme</b>, then <b>Publish changes</b>. Customers see the new colours about a minute later.</p>
+        <div class="tgrid" id="tGrid"></div>
+      </div>
+      <div class="box">
+        <h3>Font style</h3>
+        <p class="hint">Choose how headings and text look. Every font style works with every colour theme. <b>Preview</b> shows it on the website below; <b>Use this font style</b>, then <b>Publish changes</b>, makes it live.</p>
+        <div class="tgrid" id="fGrid"></div>
+      </div>
+      <div class="box tprev">
+        <div class="tpbar">
+          <b id="tpName">Preview</b>
+          <div class="chips" role="group" aria-label="Preview size">
+            <button class="chip" type="button" data-dev="desk" aria-pressed="true">Computer</button>
+            <button class="chip" type="button" data-dev="phone" aria-pressed="false">Phone</button>
+          </div>
+          <a class="sm" id="tpOpen" href="../?themes" target="_blank" rel="noopener">Open in a new tab</a>
+        </div>
+        <div class="tframe" id="tFrameBox"><iframe id="tFrame" title="Website preview" loading="lazy"></iframe></div>
+      </div>
+    </div>
+
+    <!-- Business info -->
+    <div class="panel" id="tab-business" hidden>
+      <div class="box">
+        <h3>Shop</h3>
+        <div class="two">
+          <label class="fld" for="b-n">Shop name<input id="b-n" data-b="shop.name" maxlength="24"></label>
+          <label class="fld" for="b-tl">Tagline<input id="b-tl" data-b="shop.tagline" maxlength="60"></label>
+        </div>
+        <label class="fld" for="b-c">City you deliver in<input id="b-c" data-b="shop.city" maxlength="30" placeholder="Lahore"></label>
+        <label class="fld" for="areasBox">Delivery areas (one per line; customers pick one at checkout. Leave blank to let them type their area)<textarea id="areasBox" rows="6"></textarea></label>
+        <label class="fld" for="b-fa">Footer description<textarea id="b-fa" data-b="shop.footAbout" rows="2" maxlength="200"></textarea></label>
+      </div>
+      <div class="box">
+        <h3>Contact</h3>
+        <div class="two">
+          <label class="fld" for="c-w">WhatsApp number (orders arrive here; to change it, type the new number and publish)<input id="c-w" data-b="shop.wa" inputmode="tel" placeholder="0300 1234567"></label>
+          <label class="fld" for="c-p">Call number (if different)<input id="c-p" data-b="shop.phone" inputmode="tel"></label>
+        </div>
+        <div class="two">
+          <label class="fld" for="c-e">Email<input id="c-e" data-b="shop.email" inputmode="email"></label>
+          <label class="fld" for="c-h">Timings<input id="c-h" data-b="shop.hours" placeholder="Mon–Sun, 12pm–10pm"></label>
+        </div>
+        <label class="fld" for="c-a">Address or pickup point<input id="c-a" data-b="shop.address" maxlength="140"></label>
+        <div class="three">
+          <label class="fld" for="s-i">Instagram link<input id="s-i" data-b="social.insta" placeholder="https://instagram.com/…"></label>
+          <label class="fld" for="s-f">Facebook link<input id="s-f" data-b="social.fb" placeholder="https://facebook.com/…"></label>
+          <label class="fld" for="s-t">TikTok link<input id="s-t" data-b="social.tiktok" placeholder="https://tiktok.com/@…"></label>
+        </div>
+      </div>
+      <div class="box" id="adminsBox">
+        <h3>Admin access</h3>
+        <p class="hint">Google accounts that can sign in to this super admin. Each also needs the 6-digit code from the <b>Crum</b> entry in the authenticator app. To change your Gmail, add the new one first, then remove the old one. Changes here are saved straight away.</p>
+        <div id="admList" class="adm-list"></div>
+        <form class="adm-add" id="admForm" autocomplete="off" novalidate>
+          <input id="admNew" type="email" inputmode="email" placeholder="name@gmail.com" aria-label="Gmail address to add">
+          <button class="btn dark" type="submit" id="admAdd">Add Gmail</button>
+        </form>
+        <div class="msg err" id="admMsg" style="text-align:left"></div>
+      </div>
+      <div class="box">
+        <h3>Owner and registration</h3>
+        <p class="hint">Blank fields are not shown on the website.</p>
+        <div class="two">
+          <label class="fld" for="r-o">Owner name<input id="r-o" data-b="reg.owner" maxlength="40"></label>
+          <label class="fld" for="r-b">Registered business name<input id="r-b" data-b="reg.business" maxlength="60"></label>
+        </div>
+        <div class="three">
+          <label class="fld" for="r-r">Registration no.<input id="r-r" data-b="reg.regNo" maxlength="40"></label>
+          <label class="fld" for="r-n">NTN<input id="r-n" data-b="reg.ntn" maxlength="20"></label>
+          <label class="fld" for="r-y">Established (year)<input id="r-y" data-b="reg.since" maxlength="4" inputmode="numeric" placeholder="2026"></label>
+        </div>
+      </div>
+      <div class="box">
+        <h3>Policies</h3>
+        <label class="fld" for="po-h">How to order (one step per line; also shown on the homepage)<textarea id="po-h" data-b="policies.howto" rows="5"></textarea></label>
+        <label class="fld" for="po-r">Refunds &amp; cancellations<textarea id="po-r" data-b="policies.refund" rows="4"></textarea></label>
+        <label class="fld" for="po-t">Terms &amp; conditions<textarea id="po-t" data-b="policies.terms" rows="4"></textarea></label>
+        <label class="fld" for="po-p">Privacy policy<textarea id="po-p" data-b="policies.privacy" rows="3"></textarea></label>
+      </div>
+    </div>
+
+    <!-- Payment & delivery -->
+    <div class="panel" id="tab-pay" hidden>
+      <div class="banner warn" id="payWarn" hidden>No payment account is filled in yet. Add a JazzCash, Easypaisa or bank account so the acceptance message tells customers where to send the advance.</div>
+      <div class="banner warn" id="waWarn" hidden>The shop's WhatsApp number is blank (Business info → Contact). Until it is added, customers cannot send their order on WhatsApp.</div>
+      <div class="box">
+        <h3>Payment rule</h3>
+        <p class="hint">Most customers in Pakistan prefer cash on delivery and are wary of paying an advance to a shop they do not know yet. Asking for an advance only on larger orders, after you accept them, keeps new customers comfortable while protecting you on Dawat orders.</p>
+        <div class="two">
+          <label class="fld" for="pa-p">Advance
+            <select id="pa-p" data-b="shop.advancePct" data-n>
+              <option value="50">50% advance, balance on delivery</option>
+              <option value="100">Full payment in advance</option>
+              <option value="0">No advance: cash on delivery for every order</option>
+            </select></label>
+          <label class="fld" for="pa-f">Ask for the advance on orders of (Rs) or more<input id="pa-f" type="number" min="0" step="100" inputmode="numeric" data-b="shop.advanceFrom" data-n placeholder="3000"></label>
+        </div>
+        <p class="hint">Orders below this amount are cash on delivery. Use 0 to ask for the advance on every order. The website's checkout, policies and "Pay with confidence" section update automatically.</p>
+        <div class="banner" id="paySummary"></div>
+      </div>
+      <div class="box">
+        <h3>Payment methods</h3>
+        <p class="hint">When you accept an order, every <b>Active</b> method below is included in the WhatsApp message to the customer. Switch a method to <b>Inactive</b> to leave it out without deleting it. Methods without an account number are left out.</p>
+        <div data-list="pay.accounts"></div>
+        <button class="sm" type="button" data-ladd="pay.accounts" style="align-self:start">+ Add payment method</button>
+      </div>
+      <div class="box">
+        <h3>Delivery</h3>
+        <div class="two">
+          <label class="fld" for="d-f">Delivery charge added to the bill (Rs)<input id="d-f" type="number" min="0" step="10" data-b="shop.delFee" data-n placeholder="0"></label>
+          <label class="fld" for="d-t">Delivery note for customers<input id="d-t" data-b="shop.delText" maxlength="90" placeholder="Delivery fare is paid to the rider"></label>
+        </div>
+        <p class="hint">Leave the charge at 0 if the customer pays the rider directly; the cart then shows "Paid to rider".</p>
+      </div>
+    </div>
+  </main>
+
+  <div class="savebar" id="saveBar" hidden>
+    <div class="sbin">
+      <span class="st" id="saveSt">All changes published</span>
+      <div class="sbacts">
+        <button class="btn ghost" type="button" id="discardAll" hidden>Discard</button>
+        <button class="btn brand" type="button" id="saveAll" disabled>Publish changes</button>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="../assets/themes.js?v=23"></script>
+<script src="../assets/common.js?v=23"></script>
+<script src="config.js?v=23"></script>
+<script src="admin.js?v=23"></script>
+</body>
+</html>

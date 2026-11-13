@@ -1,0 +1,10 @@
+{
+  "name": "crum-site",
+  "private": true,
+  "description": "crum.pages.dev: website forwarder plus the sign-in and order service",
+  "scripts": {
+    "deploy": "wrangler pages deploy public --project-name crum --branch main",
+    "test": "node --test test/"
+  },
+  "type": "module"
+}

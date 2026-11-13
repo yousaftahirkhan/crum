@@ -1,0 +1,248 @@
+{
+ "theme": "crum",
+ "fonts": "poppins",
+ "shop": {
+  "name": "Crum",
+  "tagline": "Tiramisu and Classic Lotus Crumb, delivered across Lahore",
+  "announce": [
+   "Delivering across Lahore",
+   "Tiramisu and Classic Lotus Crumb, in three sizes",
+   "The Dawat Serving, for family gatherings"
+  ],
+  "city": "Lahore",
+  "areas": [
+   "Allama Iqbal Town",
+   "Askari",
+   "Bahria Orchard",
+   "Bahria Town",
+   "Cantt",
+   "Cavalry Ground",
+   "DHA Phase 1",
+   "DHA Phase 2",
+   "DHA Phase 3",
+   "DHA Phase 4",
+   "DHA Phase 5",
+   "DHA Phase 6",
+   "DHA Phase 7",
+   "DHA Phase 8",
+   "EME Society",
+   "Faisal Town",
+   "Garden Town",
+   "Garhi Shahu",
+   "Green Town",
+   "Gulberg",
+   "Gulshan-e-Ravi",
+   "Ichhra",
+   "Johar Town",
+   "Lake City",
+   "Mall Road",
+   "Model Town",
+   "Mozang",
+   "Mughalpura",
+   "Muslim Town",
+   "Mustafa Town",
+   "Nishtar Colony",
+   "Paragon City",
+   "Park View City",
+   "PCSIR Housing",
+   "Raiwind Road",
+   "Sabzazar",
+   "Samanabad",
+   "Shadbagh",
+   "Shadman",
+   "Shalimar",
+   "State Life Housing",
+   "Sui Gas Society",
+   "Thokar Niaz Baig",
+   "Township",
+   "Valencia",
+   "Walton",
+   "Wapda Town"
+  ],
+  "wa": "0317 6926757",
+  "phone": "",
+  "email": "",
+  "hours": "",
+  "address": "",
+  "footAbout": "A small menu of two desserts, Tiramisu and Classic Lotus Crumb, offered in three sizes and delivered across Lahore.",
+  "advancePct": 50,
+  "advanceFrom": 3000,
+  "delFee": 0,
+  "delText": "Delivery fare is paid to the rider"
+ },
+ "reg": {
+  "owner": "",
+  "business": "",
+  "regNo": "",
+  "ntn": "",
+  "since": "",
+  "address": ""
+ },
+ "social": {
+  "insta": "",
+  "fb": "",
+  "tiktok": ""
+ },
+ "pay": {
+  "accounts": [
+   {
+    "method": "JazzCash",
+    "title": "",
+    "number": "0317 6926757",
+    "active": true
+   },
+   {
+    "method": "Easypaisa",
+    "title": "",
+    "number": "0317 6926757",
+    "active": true
+   }
+  ]
+ },
+ "slides": [
+  {
+   "kicker": "Classic Lotus Crumb",
+   "title": "Silky cream beneath a golden Lotus crumb",
+   "text": "A smooth, creamy base finished with a generous layer of caramelised biscuit crumb.",
+   "btn": "Discover Lotus Crumb",
+   "go": "lotus",
+   "photo": "images/products/lotus-large.jpg"
+  },
+  {
+   "kicker": "Tiramisu",
+   "title": "Coffee, cream and a soft dusting of cocoa",
+   "text": "Delicate sponge fingers soaked in coffee and layered with smooth cream.",
+   "btn": "Discover Tiramisu",
+   "go": "tiramisu",
+   "photo": "images/products/tiramisu-large.jpg"
+  },
+  {
+   "kicker": "Dawat Serving",
+   "title": "A generous dish for the whole table",
+   "text": "Tiramisu or Classic Lotus Crumb, served in a dish made for family dinners and gatherings.",
+   "btn": "View Dawat Serving",
+   "go": "size:dawat",
+   "photo": "images/products/tiramisu-dawat.jpg"
+  }
+ ],
+ "why": [
+  {
+   "t": "A considered menu",
+   "x": "Two desserts, Tiramisu and Classic Lotus Crumb, and nothing else."
+  },
+  {
+   "t": "A size for every occasion",
+   "x": "From a single serving to a dish for the whole table."
+  },
+  {
+   "t": "Simple ordering",
+   "x": "Place your order here, and we confirm it with you on WhatsApp."
+  }
+ ],
+ "promo": {
+  "kicker": "Dawat Serving",
+  "title": "For gatherings and dawats",
+  "text": "The Dawat Serving brings a generous dish of Tiramisu or Classic Lotus Crumb to your table.",
+  "btn": "View Dawat Serving",
+  "go": "size:dawat",
+  "photo": "images/products/lotus-dawat.jpg"
+ },
+ "about": {
+  "title": "About Crum",
+  "text": "Crum is a dessert kitchen with a deliberately short menu: Tiramisu and Classic Lotus Crumb.\n\nEach is offered in three sizes, from a Single Serving for a quiet evening to a Dawat Serving for the whole table, and delivered across Lahore.",
+  "photo": ""
+ },
+ "policies": {
+  "howto": "1. Choose a dessert and size, and add it to your cart.\n2. Enter your delivery address in Lahore and place the order. Nothing is paid at checkout.\n3. We accept your order on WhatsApp from our official number.\n4. Orders under Rs 3,000 are paid in cash on delivery. For larger orders, send the 50% advance and the screenshot in the same chat.\n5. We deliver on the date you choose. Any balance is paid on delivery.",
+  "refund": "• Cancel before we start preparing your order and any advance is refunded in full.\n• If we cancel your order or cannot deliver it, any advance is refunded in full.\n• Once preparation has started, the advance is non-refundable.\n• If your order arrives damaged or incorrect, send a photo on the day of delivery. We will replace it or refund you.",
+  "terms": "• We deliver within Lahore only.\n• Prices are in Pakistani Rupees and may change.\n• Desserts are perishable. Keep them refrigerated and enjoy them fresh.\n• Orders under Rs 3,000 are paid in cash on delivery. Orders of Rs 3,000 or more are confirmed once a 50% advance is received; the balance is paid on delivery.\n• The delivery fare is paid to the rider.",
+  "privacy": "Your name, phone number and address are used only to process and deliver your order. We do not share them with anyone except the rider who delivers your order."
+ },
+ "reviews": [],
+ "products": [
+  {
+   "id": "tiramisu",
+   "name": "Tiramisu",
+   "line": "Coffee-soaked sponge fingers, smooth cream and a dusting of cocoa.",
+   "desc": "Delicate sponge fingers soaked in coffee, layered with smooth cream and finished with a soft dusting of cocoa.",
+   "ingredients": "",
+   "allergens": "",
+   "storage": "Keep refrigerated and serve chilled.",
+   "best": true,
+   "isNew": false,
+   "soldOut": false,
+   "photo": "images/products/tiramisu-large.jpg",
+   "sizes": [
+    {
+     "id": "single",
+     "name": "Single Serving",
+     "serves": "For one",
+     "price": 500,
+     "was": 0,
+     "photo": "images/products/tiramisu-single.jpg",
+     "soldOut": false
+    },
+    {
+     "id": "large",
+     "name": "Large Tub",
+     "serves": "To share",
+     "price": 1400,
+     "was": 0,
+     "photo": "images/products/tiramisu-large.jpg",
+     "soldOut": false
+    },
+    {
+     "id": "dawat",
+     "name": "Dawat Serving",
+     "serves": "For the whole table",
+     "price": 4500,
+     "was": 0,
+     "photo": "images/products/tiramisu-dawat.jpg",
+     "soldOut": false
+    }
+   ]
+  },
+  {
+   "id": "lotus",
+   "name": "Classic Lotus Crumb",
+   "line": "Smooth cream beneath a generous layer of Lotus biscuit crumb.",
+   "desc": "A smooth, creamy base finished with a generous layer of crunchy, caramelised Lotus biscuit crumb.",
+   "ingredients": "",
+   "allergens": "",
+   "storage": "Keep refrigerated and serve chilled.",
+   "best": true,
+   "isNew": false,
+   "soldOut": false,
+   "photo": "images/products/lotus-large.jpg",
+   "sizes": [
+    {
+     "id": "single",
+     "name": "Single Serving",
+     "serves": "For one",
+     "price": 400,
+     "was": 0,
+     "photo": "images/products/lotus-single.jpg",
+     "soldOut": false
+    },
+    {
+     "id": "large",
+     "name": "Large Tub",
+     "serves": "To share",
+     "price": 1200,
+     "was": 0,
+     "photo": "images/products/lotus-large.jpg",
+     "soldOut": false
+    },
+    {
+     "id": "dawat",
+     "name": "Dawat Serving",
+     "serves": "For the whole table",
+     "price": 3500,
+     "was": 0,
+     "photo": "images/products/lotus-dawat.jpg",
+     "soldOut": false
+    }
+   ]
+  }
+ ]
+}
