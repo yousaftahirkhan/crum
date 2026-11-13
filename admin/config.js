@@ -17,5 +17,5 @@ window.ADMIN_CONFIG = {
   siteUrl: "https://crum.pages.dev/",
   authUrl: "https://crum.pages.dev/api",
   googleClientId: "1053200574750-jp3u1ddiobmnlsh4pnh3tvp5fcpb0i9d.apps.googleusercontent.com",
-  githubAppClientId: ""
+  githubAppClientId: "Iv23liTmsjm4gXzGafsl"
 };
