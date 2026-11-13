@@ -6,6 +6,15 @@
 const ORIGIN = "https://yousaftahirkhan.github.io/crum";
 const DROP = ["x-github-request-id", "x-fastly-request-id", "x-served-by", "x-cache", "x-cache-hits", "x-timer", "via", "content-length", "access-control-allow-origin"];
 
+/* Keeps copies at Cloudflare's edge near the visitor, so pages load fast: photos and versioned files (?v=) for a day,
+   pages for one minute. Shop data and the admin are never cached here, so publishing shows up straight away. */
+function edgeCache(url) {
+  const p = url.pathname;
+  if (p.startsWith("/data/") || p.startsWith("/admin")) return {cacheTtl: 0, cacheEverything: false};
+  if (p.startsWith("/images/") || (p.startsWith("/assets/") && url.searchParams.has("v"))) return {cacheTtlByStatus: {"200-299": 86400, "404": 60, "500-599": 0}, cacheEverything: true};
+  return {cacheTtlByStatus: {"200-299": 60, "404": 60, "500-599": 0}, cacheEverything: true};
+}
+
 export async function onRequest({request}) {
   const url = new URL(request.url);
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", {status: 405, headers: {Allow: "GET, HEAD"}});
@@ -13,7 +22,8 @@ export async function onRequest({request}) {
   const upstream = await fetch(ORIGIN + url.pathname + url.search, {
     method: request.method,
     headers: {Accept: request.headers.get("Accept") || "*/*", "Accept-Encoding": "gzip, br"},
-    redirect: "manual"
+    redirect: "manual",
+    cf: edgeCache(url)
   });
 
   // GitHub Pages redirects folders without a trailing slash; keep the visitor on this address.

@@ -549,8 +549,24 @@ addEventListener("message", e => {
   if (e.data.type === "crum-fonts") applyFonts(e.data.id);
 });
 
+/* ---------- search engines: the shop and its menu as schema.org data, built from the published menu ---------- */
+function renderSchema() {
+  const prices = items().map(it => it.s.price), site = "https://crum.pages.dev/";
+  const ld = {"@context": "https://schema.org", "@type": "Bakery", name: S.shop.name || "Crum", url: site, image: site + "images/share.jpg",
+    description: S.shop.footAbout || S.shop.tagline || "", servesCuisine: "Desserts", currenciesAccepted: "PKR",
+    ...(intl(S.shop.wa) ? {telephone: "+" + intl(S.shop.wa)} : {}),
+    ...(S.shop.city ? {areaServed: {"@type": "City", name: S.shop.city}, address: {"@type": "PostalAddress", addressLocality: S.shop.city, addressCountry: "PK"}} : {}),
+    ...(prices.length ? {priceRange: `${rs(Math.min(...prices))} – ${rs(Math.max(...prices))}`.replace(/ /g, " ")} : {}),
+    hasMenu: {"@type": "Menu", hasMenuSection: S.products.map(p => ({"@type": "MenuSection", name: p.name,
+      hasMenuItem: p.sizes.filter(s => s.name && s.price > 0).map(s => ({"@type": "MenuItem", name: `${p.name} (${s.name})`, description: p.line || "",
+        ...(sizePhoto(p, s) ? {image: site + sizePhoto(p, s)} : {}),
+        offers: {"@type": "Offer", price: s.price, priceCurrency: "PKR", availability: sizeAvailable(p, s) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"}}))}))}};
+  let el = $("ld"); if (!el) { el = document.createElement("script"); el.type = "application/ld+json"; el.id = "ld"; document.head.appendChild(el) }
+  el.textContent = JSON.stringify(ld);
+}
+
 /* ---------- start: load the published shop data ---------- */
-function renderAll() { renderChrome(); renderAnnounce(); renderPills(); renderHero(); renderShop(); renderStrip(); renderWhy(); renderTrust(); renderPromo(); renderSteps(); renderReviews(); renderStory(); renderCart(); renderMyOrders(); renderThemePanel() }
+function renderAll() { renderChrome(); renderAnnounce(); renderPills(); renderHero(); renderShop(); renderStrip(); renderWhy(); renderTrust(); renderPromo(); renderSteps(); renderReviews(); renderStory(); renderCart(); renderMyOrders(); renderThemePanel(); renderSchema() }
 (async () => {
   try {
     const r = await fetch("data/shop.json?v=" + Date.now(), {cache: "no-store"});
