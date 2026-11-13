@@ -65,9 +65,9 @@
   "hours": "",
   "address": "",
   "footAbout": "A small menu of two desserts, Tiramisu and Classic Lotus Crumb, offered in three sizes and delivered across Lahore.",
-  "advancePct": 50,
+  "advancePct": 100,
   "advanceFrom": 3000,
-  "delFee": 0,
+  "delFee": 100,
   "delText": "Delivery fare is paid to the rider"
  },
  "reg": {
