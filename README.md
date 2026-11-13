@@ -45,10 +45,12 @@ Tiramisu Cocoa, Strawberry Milk, Pistachio Cream, Midnight Cocoa).
 
 ## Signing in to the super admin
 
-- **Main sign-in:** Google account, then the 6-digit code from the **Crum** entry in an authenticator app. Both are checked by
-  the service at `/api`, which then gives the admin a 1-hour key limited to the two shop repositories.
-- **Who can sign in:** Super admin → Business info → **Admin access**. The list is saved as `admins.json` in the private
-  `crum-orders` repository. To change Gmail, add the new address first, then remove the old one. If the file is missing,
+- **Main sign-in:** Gmail + password + the 6-digit code from the **Crum** entry in an authenticator app, all checked by
+  the service at `/api`, which then gives the admin a 1-hour key limited to the two shop repositories. A Gmail that has
+  no password yet creates one at its first sign-in (the authenticator code is still required). Passwords are stored only
+  as PBKDF2 hashes in `admins.json`.
+- **Who can sign in:** Super admin → Business info → **Admin access** (add, remove, reset password). The list is saved as
+  `admins.json` in the private `crum-orders` repository. To change Gmail, add the new address first, sign in with it, then remove the old one. If the file is missing,
   the service falls back to its private `ALLOWED_EMAILS` setting.
 - **Phone numbers:** the WhatsApp number is under Business info → Contact; payment numbers (JazzCash, Easypaisa, banks)
   are under Payment & delivery, each with an Active / Inactive switch.

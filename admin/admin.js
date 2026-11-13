@@ -22,7 +22,7 @@ let S = normalizeShop({});
 
 /* ---------- GitHub API ---------- */
 class GHError extends Error { constructor(status, msg) { super(msg); this.status = status } }
-/* In "app" mode (Google + authenticator sign-in) the token comes from the sign-in service and lasts 1 hour;
+/* In "app" mode (Gmail + password + authenticator sign-in) the token comes from the sign-in service and lasts 1 hour;
    it is renewed from the signed session shortly before it runs out, or once if GitHub rejects it. */
 async function gh(path, opts = {}) {
   if (MODE === "app" && TOKEN_EXP - Date.now() < 5 * 60e3) await refreshAppToken();
@@ -53,7 +53,7 @@ function b64encUtf8(str) { const bytes = new TextEncoder().encode(str); let bin 
 function b64decUtf8(b64) { const bin = atob(String(b64).replace(/\s/g, "")); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes) }
 
 /* ---------- sign in / out ----------
-   Main route: Google + authenticator code, checked by the sign-in service at /api (site-proxy/lib/auth.js).
+   Main route: Gmail + password + authenticator code, checked by the sign-in service at /api (site-proxy/lib/auth.js).
    Other routes: "Sign in with GitHub" (the service swaps GitHub's one-time code for an 8-hour token and sends it back
    here in the URL fragment), or a fine-grained access token pasted into the form. */
 const EXP_KEY = "crum-admin-exp", STATE_KEY = "crum-oauth-state";
@@ -89,11 +89,11 @@ function showSignin(msg, where = "google") {
   $("gMsg").textContent = where === "google" ? msg || "" : ""; $("ghMsg").textContent = where === "github" ? msg || "" : "";
   $("signMsg").textContent = where === "token" ? msg || "" : ""; $("tok").value = "";
   if (!CFG.githubAppClientId || !CFG.authUrl) $("ghSignin").hidden = true;
-  if (!CFG.googleClientId || !CFG.authUrl) { $("gSignin").hidden = true; $("otherWays").open = true }
+  if (!CFG.authUrl) { $("gSignin").hidden = true; $("otherWays").open = true }
   if (where === "github" || where === "token") $("otherWays").open = true;
 }
 
-/* ---------- Google + authenticator sign-in ---------- */
+/* ---------- Gmail + password + authenticator sign-in ---------- */
 const SESSION_KEY = "crum-admin-session", SESSION_EXP_KEY = "crum-admin-session-exp";
 let MODE = "user", TOKEN_EXP = 0, SESSION = "", gCred = null;
 const loadSession = () => { const s = store(SESSION_KEY), x = +store(SESSION_EXP_KEY); if (s && x > Date.now()) return s; dropSession(); return "" };
@@ -108,47 +108,41 @@ async function authPost(path, body) {
   return d;
 }
 async function refreshAppToken() { const d = await authPost("/token", {session: SESSION}); TOKEN = d.token; TOKEN_EXP = d.token_exp; return d }
-function initGoogle() {
-  if (!CFG.googleClientId || !CFG.authUrl) return;
-  const go = () => {
-    google.accounts.id.initialize({client_id: CFG.googleClientId, callback: onGoogle, auto_select: false, ux_mode: "popup", itp_support: true});
-    google.accounts.id.renderButton($("gBtn"), {theme: "filled_black", size: "large", shape: "pill", text: "signin_with", logo_alignment: "left", width: 300});
-  };
-  if (window.google && google.accounts && google.accounts.id) return go();
-  let n = 0; const t = setInterval(() => {
-    if (window.google && google.accounts && google.accounts.id) { clearInterval(t); go() }
-    else if (++n > 75) { clearInterval(t); $("gMsg").textContent = "Google sign-in could not load. Check your connection and reload the page." }
-  }, 200);
-}
-function onGoogle(resp) {
-  gCred = resp && resp.credential; let email = "";
-  try { email = JSON.parse(atob(gCred.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || "" } catch (e) {}
-  $("gEmail").textContent = email || "your Google account";
-  $("gStep1").hidden = true; $("gStep2").hidden = false; $("gMsg").textContent = ""; $("otp").value = ""; $("otp").focus();
-}
-$("gRestart").onclick = () => { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false; $("gMsg").textContent = ""; try { google.accounts.id.disableAutoSelect() } catch (e) {} };
-$("otp").addEventListener("input", () => { $("otp").value = $("otp").value.replace(/\D/g, "").slice(0, 6) });
+/* Gmail + password + authenticator code. The first sign-in of a Gmail creates its password. */
 const LOGIN_ERR = {
-  bad_code: "That code is not correct. Use the newest code in your authenticator app and check that your phone's time is set automatically.",
-  google_invalid: "Your Google sign-in has expired. Select \"Use a different Google account\" and sign in again.",
-  not_allowed: "This Google account is not allowed to manage this shop.",
-  too_many: "Too many wrong codes. Please wait 15 minutes and try again."
+  not_allowed: "This Gmail is not allowed to manage this shop. Ask an admin to add it under Business info → Admin access.",
+  bad_code: "That code is not correct. Use the newest code from the Crum entry in your authenticator app, and check that your phone's time is set automatically.",
+  bad_password: "That password is not correct. If you have forgotten it, ask another admin to reset it under Admin access.",
+  weak_password: "Choose a password of at least 8 characters that is not only numbers.",
+  too_many: "Too many attempts. Please wait 15 minutes and try again."
 };
-$("gStep2").addEventListener("submit", async e => {
+let NEW_PW = false;
+$("otp").addEventListener("input", () => { $("otp").value = $("otp").value.replace(/\D/g, "").slice(0, 6) });
+function askNewPassword(on) {
+  NEW_PW = on; $("newPw").hidden = !on; $("lgPassWrap").hidden = on; $("firstHint").hidden = on;
+  $("otpBtn").textContent = on ? "Create password and sign in" : "Sign in";
+  if (on) { $("lgNew").value = $("lgNew2").value = ""; $("lgNew").focus() }
+}
+$("pwForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const code = $("otp").value.replace(/\D/g, "");
+  const email = $("lgEmail").value.trim().toLowerCase(), code = $("otp").value.replace(/\D/g, "");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("gMsg").textContent = "Enter your Gmail address."; return }
+  if (NEW_PW && $("lgNew").value !== $("lgNew2").value) { $("gMsg").textContent = "The two new passwords do not match."; return }
   if (code.length !== 6) { $("gMsg").textContent = "Enter the 6-digit code from your authenticator app."; return }
   $("otpBtn").disabled = true; $("otpBtn").textContent = "Checking…"; $("gMsg").textContent = "";
   try {
-    const d = await authPost("/login", {id_token: gCred, code, remember: $("trust").checked});
+    const d = await authPost("/login", {email, password: $("lgPass").value, code, remember: $("trust").checked, ...(NEW_PW ? {new_password: $("lgNew").value} : {})});
     SESSION = d.session; keepSession(d.session, d.session_exp, $("trust").checked); TOKEN_EXP = d.token_exp; dropToken();
+    try { localStorage.setItem("crum-admin-email", email) } catch (err) {}
     await signIn(d.token, "app", d.email);
   } catch (err) {
+    if (err.code === "set_password") { askNewPassword(true); $("gMsg").textContent = ""; return }
     $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
-    if (err.code === "google_invalid" || err.code === "not_allowed") { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false }
     if (err.code === "bad_code") { $("otp").value = ""; $("otp").focus() }
-  } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = "Verify and sign in" }
+    if (err.code === "bad_password") { $("lgPass").value = ""; $("lgPass").focus() }
+  } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = NEW_PW ? "Create password and sign in" : "Sign in" }
 });
+try { const m = localStorage.getItem("crum-admin-email"); if (m) $("lgEmail").value = m } catch (e) {}
 $("ghBtn").onclick = () => {
   const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
   try { sessionStorage.setItem(STATE_KEY, state) } catch (e) {}
@@ -177,7 +171,7 @@ $("signinForm").addEventListener("submit", async e => {
 });
 $("signOut").onclick = () => {
   if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
-  dirty = false; dropToken(); dropSession(); try { google.accounts.id.disableAutoSelect() } catch (e) {}
+  dirty = false; dropToken(); dropSession();
   history.replaceState(null, "", location.pathname); location.reload();
 };
 
@@ -706,32 +700,36 @@ document.querySelectorAll("[data-dev]").forEach(b => b.onclick = () => {
 
 /* =====================================================================
    ADMIN ACCESS (private repository: admins.json = {"emails": [...]})
-   The sign-in service lets these Google accounts in (with the authenticator code). Saved immediately, not on Publish.
+   The sign-in service lets these Gmail addresses in (each with its own password and the authenticator code). Saved immediately, not on Publish.
    ===================================================================== */
-let ADMINS_LIST = [], adminsSha = null, adminsBusy = false, ME = "";
+let ADMINS_LIST = [], ADMINS_DOC = {}, adminsSha = null, adminsBusy = false, ME = "";
 const emailOk = s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
 async function loadAdmins() {
   $("admMsg").textContent = "";
   if (DEMO) { ADMINS_LIST = ADMINS_LIST.length ? ADMINS_LIST : ["yousaftahirkhan@gmail.com"]; renderAdmins(); return }
-  if (!ORDERS_OK) { $("admList").innerHTML = `<p class="hint" style="padding:10px 12px">Admin access needs the private order storage. Sign in with Google to manage it.</p>`; return }
+  if (!ORDERS_OK) { $("admList").innerHTML = `<p class="hint" style="padding:10px 12px">Admin access needs the private order storage. Sign in with your Gmail and password to manage it.</p>`; return }
   try {
     const f = await gh(`${ORD}/contents/admins.json`);
-    ADMINS_LIST = ((JSON.parse(b64decUtf8(f.content || "")) || {}).emails || []).map(s => String(s).toLowerCase()); adminsSha = f.sha;
-  } catch (e) { if (e.status === 404) { ADMINS_LIST = []; adminsSha = null } else { $("admMsg").textContent = "The admin list could not load. " + errText(e); return } }
+    ADMINS_DOC = JSON.parse(b64decUtf8(f.content || "")) || {}; ADMINS_LIST = (ADMINS_DOC.emails || []).map(s => String(s).toLowerCase()); adminsSha = f.sha;
+  } catch (e) { if (e.status === 404) { ADMINS_DOC = {}; ADMINS_LIST = []; adminsSha = null } else { $("admMsg").textContent = "The admin list could not load. " + errText(e); return } }
   renderAdmins();
 }
 function renderAdmins() {
-  $("admList").innerHTML = ADMINS_LIST.length ? ADMINS_LIST.map(em => `<div class="adm-row"><span class="em">${esc(em)}</span>${em === ME ? `<span class="src">You</span>` : ""}<button class="sm red" type="button" data-admrm="${esc(em)}"${ADMINS_LIST.length < 2 ? ` disabled title="At least one admin is needed"` : ""}>Remove</button></div>`).join("")
+  const pw = ADMINS_DOC.passwords || {};
+  $("admList").innerHTML = ADMINS_LIST.length ? ADMINS_LIST.map(em => `<div class="adm-row"><span class="em">${esc(em)}<small>${pw[em] ? "Password set" : "Creates a password at first sign-in"}</small></span>${em === ME ? `<span class="src">You</span>` : ""}${pw[em] ? `<button class="sm" type="button" data-admreset="${esc(em)}">Reset password</button>` : ""}<button class="sm red" type="button" data-admrm="${esc(em)}"${ADMINS_LIST.length < 2 ? ` disabled title="At least one admin is needed"` : ""}>Remove</button></div>`).join("")
     : `<p class="hint" style="padding:10px 12px">No list saved yet; the sign-in service uses the account set up with the website. Add your Gmail to start the list.</p>`;
 }
-async function saveAdmins(next, message) {
-  if (DEMO) { ADMINS_LIST = next; renderAdmins(); toast("Saved (local preview only)"); return true }
+/* Saves the list; password hashes of Gmails that stay are kept (resetPw removes one so it is created again). */
+async function saveAdmins(next, message, resetPw) {
+  const docFor = () => { const pw = {...(ADMINS_DOC.passwords || {})}; for (const k of Object.keys(pw)) if (!next.includes(k) || k === resetPw) delete pw[k]; return {...ADMINS_DOC, emails: next, passwords: pw} };
+  if (DEMO) { ADMINS_DOC = docFor(); ADMINS_LIST = next; renderAdmins(); toast("Saved (local preview only)"); return true }
   if (adminsBusy) return false; adminsBusy = true;
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const r = await gh(`${ORD}/contents/admins.json`, {method: "PUT", body: {message, content: b64encUtf8(JSON.stringify({emails: next}, null, 1) + "\n"), ...(adminsSha ? {sha: adminsSha} : {})}});
-        ADMINS_LIST = next; adminsSha = r.content.sha; renderAdmins(); return true;
+        const doc = docFor();
+        const r = await gh(`${ORD}/contents/admins.json`, {method: "PUT", body: {message, content: b64encUtf8(JSON.stringify(doc, null, 1) + "\n"), ...(adminsSha ? {sha: adminsSha} : {})}});
+        ADMINS_DOC = doc; ADMINS_LIST = next; adminsSha = r.content.sha; renderAdmins(); return true;
       } catch (e) { if ((e.status === 409 || e.status === 422) && attempt === 0) { await loadAdmins(); continue } throw e }
     }
   } catch (e) { $("admMsg").textContent = "Not saved. " + errText(e); return false }
@@ -748,6 +746,10 @@ $("admForm").addEventListener("submit", async e => {
   $("admAdd").disabled = false;
 });
 $("admList").addEventListener("click", async e => {
+  const rp = e.target.closest("[data-admreset]");
+  if (rp) { const em = rp.dataset.admreset;
+    if (!confirm(`Reset the password for ${em}? At the next sign-in, that person creates a new password using the authenticator code.`)) return;
+    rp.disabled = true; if (await saveAdmins(ADMINS_LIST, "Admin access: password reset for " + em, em)) toast("Password reset for " + em); else rp.disabled = false; return }
   const b = e.target.closest("[data-admrm]"); if (!b) return;
   const em = b.dataset.admrm; if (ADMINS_LIST.length < 2) return;
   if (!confirm(em === ME ? `You are signed in with ${em}. Remove it? You will not be able to sign in with this Gmail again.` : `Remove ${em}? This Gmail will no longer be able to sign in.`)) return;
@@ -776,7 +778,6 @@ function sampleOrders() {
     try { await loadContent(); ORDERS = sampleOrders(); openApp() } catch (e) { $("booting").textContent = "The local shop data could not load." }
     return;
   }
-  initGoogle();
   const ret = takeAuthReturn();
   if (ret && ret.error) { showSignin(ret.error, "github"); return }
   if (ret && ret.token) { dropSession(); keepToken(ret.token, true, ret.expiresAt) }

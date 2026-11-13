@@ -11,9 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Open+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600&family=Poppins:wght@400;500;600&family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500;600&family=Libre+Baskerville&family=Nunito+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,400&family=Manrope:wght@400;500&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=26">
-<link rel="stylesheet" href="admin.css?v=26">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../assets/base.css?v=27">
+<link rel="stylesheet" href="admin.css?v=27">
 </head>
 <body>
 
@@ -27,18 +26,18 @@
       <p class="hint" style="margin-top:6px">Orders, the menu, the homepage, colours, business details and payments are managed here. Customers never see this page.</p>
     </div>
     <div class="form" id="gSignin">
-      <div id="gStep1" class="form">
-        <div class="eyebrow" style="text-align:center">Step 1 of 2</div>
-        <div id="gBtn" class="gbtn"></div>
-        <p class="hint" style="text-align:center">Sign in with the shop's Google account.</p>
-      </div>
-      <form class="form" id="gStep2" hidden autocomplete="off" novalidate>
-        <div class="eyebrow">Step 2 of 2</div>
-        <p class="hint">Signed in as <b id="gEmail"></b>. Enter the 6-digit code from your authenticator app.</p>
-        <label for="otp">Authenticator code<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
+      <form class="form" id="pwForm" novalidate>
+        <label for="lgEmail">Gmail<input id="lgEmail" type="email" inputmode="email" autocomplete="username" placeholder="name@gmail.com"></label>
+        <label for="lgPass" id="lgPassWrap">Password<input id="lgPass" type="password" autocomplete="current-password"></label>
+        <div class="form" id="newPw" hidden>
+          <p class="banner">This is your first sign-in. Choose a password of at least 8 characters, not only numbers.</p>
+          <label for="lgNew">New password<input id="lgNew" type="password" autocomplete="new-password"></label>
+          <label for="lgNew2">Repeat the new password<input id="lgNew2" type="password" autocomplete="new-password"></label>
+        </div>
+        <label for="otp">6-digit code from the Crum entry in your authenticator app<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
         <label class="toggle" for="trust"><input type="checkbox" id="trust"> Keep me signed in on this device for 30 days</label>
-        <button class="btn brand block" type="submit" id="otpBtn">Verify and sign in</button>
-        <button class="link" type="button" id="gRestart" style="align-self:center">Use a different Google account</button>
+        <button class="btn brand block" type="submit" id="otpBtn">Sign in</button>
+        <p class="hint" id="firstHint" style="text-align:center">First time? Leave the password blank; you will be asked to create one.</p>
       </form>
       <div class="msg err" id="gMsg" role="alert"></div>
     </div>
@@ -264,7 +263,7 @@
       </div>
       <div class="box" id="adminsBox">
         <h3>Admin access</h3>
-        <p class="hint">Google accounts that can sign in to this super admin. Each also needs the 6-digit code from the <b>Crum</b> entry in the authenticator app. To change your Gmail, add the new one first, then remove the old one. Changes here are saved straight away.</p>
+        <p class="hint">Gmail addresses that can sign in to this super admin. Each signs in with its own password plus the 6-digit code from the <b>Crum</b> entry in the authenticator app; a newly added Gmail creates its password at its first sign-in. To change your Gmail, add the new one first, sign in with it, then remove the old one. <b>Reset password</b> lets that person create a new one. Changes here are saved straight away.</p>
         <div id="admList" class="adm-list"></div>
         <form class="adm-add" id="admForm" autocomplete="off" novalidate>
           <input id="admNew" type="email" inputmode="email" placeholder="name@gmail.com" aria-label="Gmail address to add">
@@ -343,9 +342,9 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/themes.js?v=26"></script>
-<script src="../assets/common.js?v=26"></script>
-<script src="config.js?v=26"></script>
-<script src="admin.js?v=26"></script>
+<script src="../assets/themes.js?v=27"></script>
+<script src="../assets/common.js?v=27"></script>
+<script src="config.js?v=27"></script>
+<script src="admin.js?v=27"></script>
 </body>
 </html>

@@ -238,3 +238,6 @@ h1,h2,h3,.ptop h1,.scard h1,.box h3,.stat .v,.ohead .no,.tinfo b,.tpbar b,.szhea
 .adm-add{display:flex;gap:8px}
 .adm-add input{flex:1;min-width:0}
 @media (max-width:460px){.adm-add{flex-direction:column}}
+
+.adm-row .em small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+#newPw .banner{margin:0}

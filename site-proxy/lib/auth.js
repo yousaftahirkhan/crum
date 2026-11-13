@@ -1,21 +1,21 @@
 /* Crum: sign-in and order service, served at https://crum.pages.dev/api/ (functions/api/[[route]].js).
 
-   Main sign-in (POST /login): the owner signs in with Google, then types the 6-digit code from their authenticator
-   app. This service checks that the Google ID token is genuine and belongs to an allowed email, checks the code, and
-   returns (a) a signed session that lasts 12 hours, or 30 days on a trusted device, and (b) a 1-hour GitHub token
-   limited to the two shop repositories. POST /token swaps a valid session for a fresh 1-hour token.
+   Main sign-in (POST /login): the owner types their Gmail, their password and the 6-digit code from the "Crum" entry
+   in their authenticator app. This service checks all three and returns (a) a signed session that lasts 12 hours,
+   or 30 days on a trusted device, and (b) a 1-hour GitHub token limited to the two shop repositories.
+   POST /token swaps a valid session for a fresh 1-hour token.
 
-   Allowed Google accounts: admins.json ({"emails": [...]}) in the private orders repository, which the super admin
-   edits under Business info → Admin access. If that file is missing or empty, the ALLOWED_EMAILS secret is used.
+   Allowed accounts: admins.json in the private orders repository, which the super admin edits under Business info →
+   Admin access (see admins() below). If it lists no emails, the ALLOWED_EMAILS secret is used.
 
    Alternative sign-in (GET /callback): "Sign in with GitHub". GitHub checks the password and authenticator code;
    this service swaps GitHub's one-time code for an 8-hour user token and returns it in the URL fragment.
 
    Settings: wrangler.toml [vars] and Cloudflare secrets (marked *):
-     ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
+     ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
      ALLOWED_EMAILS*, TOTP_SECRET*, SESSION_SECRET*, GITHUB_APP_PRIVATE_KEY*, GITHUB_CLIENT_SECRET*
    Changing SESSION_VERSION signs everyone out.                                                                     */
-import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken} from "./lib.js";
+import {checkTotp, makeSession, readSession, installationToken, hashPassword, verifyPassword, passwordOk} from "./lib.js";
 
 const UA = "crum-auth";
 const SHORT = 12 * 3600e3, LONG = 30 * 864e5;
@@ -53,24 +53,39 @@ async function repoToken(env) {
   tokenCache = await installationToken({privateKeyPem: env.GITHUB_APP_PRIVATE_KEY, issuer: env.GITHUB_CLIENT_ID, owner: env.REPO_OWNER, repos: [env.SITE_REPO, env.ORDERS_REPO], userAgent: UA});
   return tokenCache;
 }
-/* The Google accounts allowed to sign in: admins.json in the orders repository (checked at most once a minute),
-   or the ALLOWED_EMAILS secret while that file is missing or empty. */
+/* Who may sign in: admins.json in the private orders repository,
+     {"emails": ["owner@gmail.com"], "passwords": {"owner@gmail.com": "pbkdf2$…"}}
+   (read at most once a minute). While the file has no emails, the ALLOWED_EMAILS secret is used. An email without a
+   password creates one at its first sign-in, which still needs the authenticator code. */
 let adminsCache = null, adminsAt = 0;
 const cleanEmails = list => [...new Set((Array.isArray(list) ? list : []).map(s => String(s).trim().toLowerCase()).filter(s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)))];
-async function allowedEmails(env) {
-  if (adminsCache && Date.now() - adminsAt < 60e3) return adminsCache;
-  let list = [];
-  try {
-    const r = await fetch(`https://api.github.com/repos/${env.REPO_OWNER}/${env.ORDERS_REPO}/contents/admins.json`, {headers: {...ghHeaders((await repoToken(env)).token), Accept: "application/vnd.github.raw+json"}});
-    if (r.ok) list = cleanEmails((JSON.parse(await r.text()) || {}).emails);
-  } catch (e) { console.error("admins.json", e && e.message) }
-  if (!list.length) list = cleanEmails(String(env.ALLOWED_EMAILS || "").split(","));
-  adminsCache = list; adminsAt = Date.now();
-  return list;
+const adminsUrl = env => `https://api.github.com/repos/${env.REPO_OWNER}/${env.ORDERS_REPO}/contents/admins.json`;
+async function admins(env, fresh) {
+  if (!fresh && adminsCache && Date.now() - adminsAt < 60e3) return adminsCache;
+  let doc = {}, sha = null;
+  const r = await fetch(adminsUrl(env), {headers: ghHeaders((await repoToken(env)).token)});
+  if (r.ok) { const f = await r.json(); sha = f.sha; doc = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(String(f.content || "").replace(/\s/g, "")), c => c.charCodeAt(0))) || "{}") || {} }
+  else if (r.status !== 404) throw new Error("admins.json read " + r.status);
+  let emails = cleanEmails(doc.emails);
+  if (!emails.length) emails = cleanEmails(String(env.ALLOWED_EMAILS || "").split(","));
+  adminsCache = {doc, sha, emails, passwords: doc.passwords && typeof doc.passwords === "object" ? doc.passwords : {}}; adminsAt = Date.now();
+  return adminsCache;
+}
+/* Saves a new password hash for one email (retries once if the file changed at the same moment). */
+async function savePassword(env, email, hash) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const a = await admins(env, true);
+    const doc = {...a.doc, emails: a.emails, passwords: {...a.passwords, [email]: hash}};
+    const w = await fetch(adminsUrl(env), {method: "PUT", headers: ghHeaders((await repoToken(env)).token),
+      body: JSON.stringify({message: "Admin access: password set for " + email, content: b64utf8(JSON.stringify(doc, null, 1) + "\n"), ...(a.sha ? {sha: a.sha} : {})})});
+    if (w.ok) { adminsCache = null; return }
+    if (w.status !== 409 && w.status !== 422) throw new Error("admins.json write " + w.status);
+  }
+  throw new Error("admins.json busy");
 }
 
-/* Slows down code guessing: at most 8 wrong codes per account in 15 minutes (per Cloudflare instance). A Google
-   sign-in to an allowed account is already needed before any code is checked. */
+/* Slows down guessing: at most 8 failed sign-ins per account in 15 minutes and 30 per visitor in an hour (per
+   Cloudflare instance). Every sign-in needs the authenticator code as well as the password. */
 const attempts = new Map();
 function tooMany(email) {
   const now = Date.now(), list = (attempts.get(email) || []).filter(t => now - t < 15 * 60e3);
@@ -78,14 +93,23 @@ function tooMany(email) {
 }
 const noteFailure = email => attempts.set(email, [...(attempts.get(email) || []), Date.now()]);
 
+/* POST /login {email, password, code, remember, new_password?}
+   Errors: not_allowed, too_many, bad_code, bad_password, set_password (no password yet: send new_password),
+   weak_password. */
 async function login(request, env) {
+  if (limited(request, "login", 30)) return reply(request, env, {error: "too_many"}, 429);
   const b = await request.json().catch(() => ({}));
-  const g = await verifyGoogleIdToken(b.id_token, env.GOOGLE_CLIENT_ID);
-  if (!g) return reply(request, env, {error: "google_invalid"}, 401);
-  const email = String(g.email).toLowerCase();
-  if (!(await allowedEmails(env)).includes(email)) return reply(request, env, {error: "not_allowed"}, 403);
+  const email = String(b.email || "").trim().toLowerCase();
+  const a = await admins(env);
+  if (!a.emails.includes(email)) return reply(request, env, {error: "not_allowed"}, 403);
   if (tooMany(email)) return reply(request, env, {error: "too_many"}, 429);
   if (!await checkTotp(env.TOTP_SECRET, b.code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+  const stored = a.passwords[email];
+  if (!stored) {
+    if (!b.new_password) return reply(request, env, {error: "set_password"}, 409);
+    if (!passwordOk(b.new_password)) return reply(request, env, {error: "weak_password"}, 400);
+    await savePassword(env, email, await hashPassword(b.new_password));
+  } else if (!await verifyPassword(b.password, stored)) { noteFailure(email); return reply(request, env, {error: "bad_password"}, 401) }
   attempts.delete(email);
   const ms = b.remember ? LONG : SHORT;
   const session = await makeSession(env.SESSION_SECRET, email, ms, env.SESSION_VERSION || "1");
@@ -96,7 +120,7 @@ async function login(request, env) {
 async function refresh(request, env) {
   const b = await request.json().catch(() => ({}));
   const s = await readSession(env.SESSION_SECRET, b.session, env.SESSION_VERSION || "1");
-  if (!s || !(await allowedEmails(env)).includes(s.e)) return reply(request, env, {error: "session_expired"}, 401);
+  if (!s || !(await admins(env)).emails.includes(s.e)) return reply(request, env, {error: "session_expired"}, 401);
   const t = await repoToken(env);
   return reply(request, env, {token: t.token, token_exp: t.exp, email: s.e});
 }

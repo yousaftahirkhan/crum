@@ -1,7 +1,17 @@
-/* Checks for the sign-in building blocks. Run: node --test auth-worker/test */
+/* Checks for the sign-in building blocks. Run: node --test test/   (in site-proxy/) */
 import test from "node:test";
 import assert from "node:assert/strict";
-import {b64url, verifyGoogleIdToken, totpAt, checkTotp, makeSession, readSession, appJwt, b64urlToBytes} from "../lib/lib.js";
+import {b64url, verifyGoogleIdToken, totpAt, checkTotp, makeSession, readSession, appJwt, b64urlToBytes, hashPassword, verifyPassword, passwordOk} from "../lib/lib.js";
+
+test("passwords: hash, verify and reject", async () => {
+  const h = await hashPassword("Crum-dessert-2026");
+  assert.match(h, /^pbkdf2\$100000\$[\w-]+\$[\w-]+$/);
+  assert.equal(await verifyPassword("Crum-dessert-2026", h), true);
+  assert.equal(await verifyPassword("crum-dessert-2026", h), false);
+  assert.equal(await verifyPassword("anything", "plain-text"), false);
+  assert.notEqual(await hashPassword("same"), await hashPassword("same"), "a new salt every time");
+  assert.equal(passwordOk("short"), false); assert.equal(passwordOk("12345678"), false); assert.equal(passwordOk("lahore2026"), true);
+});
 
 const enc = new TextEncoder();
 const CLIENT = "123-abc.apps.googleusercontent.com";

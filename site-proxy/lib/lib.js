@@ -114,3 +114,24 @@ export async function installationToken({privateKeyPem, issuer, owner, repos, us
   const t = await r.json();
   return {token: t.token, exp: Date.parse(t.expires_at)};
 }
+
+/* ---------- admin passwords ----------
+   Stored only as "pbkdf2$<iterations>$<salt>$<hash>" (PBKDF2-SHA256, 16-byte random salt). Cloudflare Workers allow at
+   most 100,000 iterations. */
+const PW_ITER = 100000;
+async function pbkdf2(password, salt, iterations) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(String(password)), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({name: "PBKDF2", hash: "SHA-256", salt, iterations}, key, 256));
+}
+export async function hashPassword(password, salt = crypto.getRandomValues(new Uint8Array(16)), iterations = PW_ITER) {
+  return `pbkdf2$${iterations}$${b64url(salt)}$${b64url(await pbkdf2(password, salt, iterations))}`;
+}
+export async function verifyPassword(password, stored) {
+  try {
+    const [kind, iter, salt, hash, extra] = String(stored || "").split("$");
+    if (kind !== "pbkdf2" || extra !== undefined || !(+iter > 0) || +iter > PW_ITER) return false;
+    return sameString(b64url(await pbkdf2(password, b64urlToBytes(salt), +iter)), hash);
+  } catch (e) { return false }
+}
+/* At least 8 characters, and not only digits. */
+export const passwordOk = p => typeof p === "string" && p.length >= 8 && p.length <= 200 && !/^\d+$/.test(p);
