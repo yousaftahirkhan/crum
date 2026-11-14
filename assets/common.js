@@ -83,11 +83,11 @@ function howtoSteps(S) {
     !pct ? "We confirm your order on WhatsApp." : from ? "We confirm your order on WhatsApp, after checking your payment if you paid at checkout." : "We check your payment and confirm your order on WhatsApp.",
     part ? (from ? "We prepare your desserts fresh. For advance orders, we send you a photo of your ready order." : "We prepare your desserts fresh and send you a photo of your ready order.") : "We prepare your desserts fresh for the date you choose.",
     (part ? `${from ? "For advance orders, you" : "You"} pay the remaining ${100 - pct}% after the photo. ` : "") + `Our rider delivers your order to your door${where}.` +
-      (!pct ? " You pay in cash when it arrives." : from ? " Cash on delivery orders are paid when they arrive." : "") + (del ? ` The ${rs(del)} delivery charge is included in your total.` : "")
+      (!pct ? " You pay in cash when it arrives." : from ? " Cash on delivery orders are paid when they arrive." : "") + (del ? ` The ${rs(del)} delivery charge is included in your total.` : " You pay the rider's fare.")
   ];
 }
 /* Lines added to the end of the terms, so payment and delivery terms always match the settings. */
-const autoTerms = S => [paymentSummary(S), +S.shop.delFee > 0 ? `Delivery charge: ${rs(Math.round(+S.shop.delFee))}, included in your total.` : ""].filter(Boolean);
+const autoTerms = S => [paymentSummary(S), +S.shop.delFee > 0 ? `Delivery charge: ${rs(Math.round(+S.shop.delFee))}, included in your total.` : "The rider's fare is paid by the customer on delivery; it is not part of the order total."].filter(Boolean);
 
 /* The safety promises shown to customers, built from the shop's settings so they always match. withAdvance adds the
    lines about paying an advance (leave it out for a cash on delivery order). */

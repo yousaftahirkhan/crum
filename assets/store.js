@@ -52,7 +52,7 @@ function card(it) {
   const {p, s, key} = it, ok = sizeAvailable(p, s), q = cart[key] || 0;
   const badge = !ok ? `<span class="badge out">Sold out</span>` : s.was > s.price ? `<span class="badge sale">${Math.round((1 - s.price / s.was) * 100)}% off</span>` : p.isNew ? `<span class="badge">New</span>` : p.best ? `<span class="badge">Bestseller</span>` : "";
   const ph = sizePhoto(p, s);
-  return `<article class="card">
+  return `<article class="card" data-key="${esc(key)}">
     <button class="pic" type="button" data-pv="${esc(p.id)}" data-sz="${esc(s.id)}" aria-label="${esc(p.name)}, ${esc(s.name)}: view details">${ph ? `<img src="${esc(photoSrc(ph))}" alt="" loading="lazy">` : ""}${badge}</button>
     <div class="body">
       <span class="szp">${esc(s.name)}</span>
@@ -300,7 +300,7 @@ $("pmBody").addEventListener("click", e => {
   if (e.target.closest("#pmCart")) { openCart(); return }
   if (e.target.closest("#pmAdd")) {
     const l = findLine(S, PM.pid + "|" + PM.sid); if (!l || !sizeAvailable(l.p, l.s)) return;
-    const k = lineKey(l.p, l.s); cart[k] = Math.min(99, (cart[k] || 0) + PM.qty); persist(); refresh();
+    const k = lineKey(l.p, l.s); cart[k] = Math.min(99, (cart[k] || 0) + PM.qty); persist(); updateLine(k);
     addedToast(`${l.p.name} (${l.s.name}) added to cart`); PM.qty = 1; openProduct(PM.pid, PM.sid, true);
   }
 });
@@ -317,8 +317,8 @@ function addedToast(msg) {
 document.addEventListener("click", e => {
   const g = e.target.closest("[data-go]"), a = e.target.closest("[data-add]"), st = e.target.closest("[data-step]"), pv = e.target.closest("[data-pv]"), pol = e.target.closest("[data-policy]"), m = e.target.closest("[data-menu]");
   if (g) { e.preventDefault(); go(g.dataset.go); return }
-  if (a) { const l = findLine(S, a.dataset.add); if (!l || !sizeAvailable(l.p, l.s)) return; cart[a.dataset.add] = (cart[a.dataset.add] || 0) + 1; persist(); refresh(); addedToast(`${l.p.name} (${l.s.name}) added to cart`); return }
-  if (st) { const k = st.dataset.step; cart[k] = (cart[k] || 0) + +st.dataset.d; if (cart[k] <= 0) { delete cart[k]; toast("Removed from cart") } persist(); refresh(); return }
+  if (a) { const k = a.dataset.add, l = findLine(S, k); if (!l || !sizeAvailable(l.p, l.s)) return; cart[k] = (cart[k] || 0) + 1; persist(); updateLine(k, '[data-step][data-d="1"]'); addedToast(`${l.p.name} (${l.s.name}) added to cart`); return }
+  if (st) { const k = st.dataset.step, d = +st.dataset.d; cart[k] = Math.min(99, (cart[k] || 0) + d); if (cart[k] <= 0) { delete cart[k]; toast("Removed from cart") } persist(); updateLine(k, cart[k] ? `[data-step][data-d="${d}"]` : "[data-add]"); return }
   if (pv) { openProduct(pv.dataset.pv, pv.dataset.sz); return }
   if (pol) { openPolicy(pol.dataset.policy); return }
   if (m) { const k = m.dataset.menu; if (k === "orders") { show($("ordersDrawer")); return } show(null); $(k).scrollIntoView({behavior: "smooth"}) }
@@ -356,6 +356,19 @@ function renderTrust() {
   $("trust").innerHTML = pts.map(([t, x], i) => `<div class="tr"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TRUST_ICONS[i % 4]}</svg></span><b>${esc(t)}</b><span>${esc(x)}</span></div>`).join("");
 }
 function refresh() { renderShop(); renderCart(); if (!$("pModal").hidden && PM.pid) openProduct(PM.pid, PM.sid, true) }
+/* One item changed: update only its card's price-and-button row (photos and the other cards are left alone, so
+   nothing flickers and the page does not move), then the cart and the open product view. focusSel puts the
+   keyboard focus back on the matching control without scrolling. */
+function updateLine(k, focusSel) {
+  const it = items().find(x => x.key === k);
+  if (it) document.querySelectorAll(`#grid .card[data-key="${CSS.escape(k)}"]`).forEach(el => {
+    const tmp = document.createElement("div"); tmp.innerHTML = card(it);
+    const row = el.querySelector(".row"), nw = tmp.querySelector(".row");
+    if (row && nw) row.replaceWith(nw); else el.replaceWith(tmp.firstElementChild);
+    const f = focusSel && el.isConnected ? el.querySelector(focusSel) : null; if (f) f.focus({preventScroll: true});
+  });
+  renderCart(); if (!$("pModal").hidden && PM.pid) openProduct(PM.pid, PM.sid, true);
+}
 
 /* ---------- cart → details → order ---------- */
 function cleanCart() { for (const k of Object.keys(cart)) { const l = findLine(S, k); if (!l || !sizeAvailable(l.p, l.s) || !(cart[k] > 0)) delete cart[k] } }
@@ -375,7 +388,8 @@ function renderCart() {
   $("lines").innerHTML = keys.length ? keys.map(k => { const {p, s} = findLine(S, k), ph = sizePhoto(p, s);
     return `<div class="cline"><div class="mini">${ph ? `<img src="${esc(photoSrc(ph))}" alt="">` : ""}</div>
       <div><div class="nm">${esc(p.name)}</div><div class="sub">${esc(s.name)} · ${rs(s.price)} each</div></div>
-      <div class="qty"><button type="button" data-cq="${esc(k)}" data-d="-1" aria-label="One less">−</button><span>${cart[k]}</span><button type="button" data-cq="${esc(k)}" data-d="1" aria-label="One more">+</button></div></div>` }).join("")
+      <div class="qty"><button type="button" data-cq="${esc(k)}" data-d="-1" aria-label="One less">−</button><span>${cart[k]}</span><button type="button" data-cq="${esc(k)}" data-d="1" aria-label="One more">+</button></div>
+      <button class="bin" type="button" data-cdel="${esc(k)}" aria-label="Remove ${esc(p.name)}, ${esc(s.name)} from the cart"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div>` }).join("")
     : `<div class="empty">Your cart is empty.<br><button class="link" type="button" data-go="all" style="margin-top:8px">Browse the menu</button></div>`;
   $("tSub").textContent = rs(t.sub); $("tDel").textContent = t.del ? rs(t.del) : "Paid to rider"; $("tTot").textContent = rs(t.tot);
   $("tAdvRow").hidden = $("tRestRow").hidden = !t.pct || t.pct >= 100;
@@ -386,7 +400,14 @@ function renderCart() {
   $("tHint").hidden = !$("tHint").textContent;
   renderCheckoutPay(t);
 }
-$("lines").addEventListener("click", e => { const b = e.target.closest("[data-cq]"); if (!b) return; const k = b.dataset.cq; cart[k] += +b.dataset.d; if (cart[k] <= 0) delete cart[k]; persist(); refresh() });
+$("lines").addEventListener("click", e => {
+  const del = e.target.closest("[data-cdel]");
+  if (del) { delete cart[del.dataset.cdel]; persist(); updateLine(del.dataset.cdel); toast("Removed from cart"); const f = $("lines").querySelector("button"); if (f) f.focus({preventScroll: true}); return }
+  const b = e.target.closest("[data-cq]"); if (!b) return;
+  const k = b.dataset.cq, d = +b.dataset.d; cart[k] = Math.min(99, (cart[k] || 0) + d); if (cart[k] <= 0) { delete cart[k]; toast("Removed from cart") }
+  persist(); updateLine(k);
+  const f = $("lines").querySelector(`[data-cq="${CSS.escape(k)}"][data-d="${d}"]`); if (f) f.focus({preventScroll: true});
+});
 function fillAreaField() {
   const list = areas(), cur = $("fArea").value || (load("crum-cust", {}).fArea) || loc.area || "";
   $("fArea").hidden = !list.length; $("fAreaTxt").hidden = !!list.length;

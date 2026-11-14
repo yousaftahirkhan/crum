@@ -38,7 +38,7 @@ body{background:var(--bg)}
 .av{width:36px;height:36px;border-radius:50%;background:#F7C6DA;color:#5A1F14;display:grid;place-items:center;font-weight:600;font-size:15px}
 .me-t{display:flex;flex-direction:column;min-width:0;font-size:12px;color:rgba(244,233,229,.6);line-height:1.35}
 .me-t b{color:#FFFFFF;font-size:13px;font-weight:600}
-.me-t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me-t span{overflow-wrap:anywhere}
 .page{margin-left:248px;min-width:0}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 32px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:rgba(251,247,245,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .tb-title{display:flex;align-items:center;gap:12px;min-width:0}
@@ -239,7 +239,7 @@ h1,h2,h3,.tb-title h1,.scard h1,.box h3,.stat .v,.ohead .no,.tinfo b,.tpbar b,.s
 .pop-item{display:flex;align-items:center;gap:10px;min-height:44px;border:0;background:transparent;border-radius:10px;padding:8px 10px;font-weight:700;text-decoration:none;color:var(--ink);text-align:left;width:100%}
 .pop-item svg{width:18px;height:18px;color:var(--muted)}
 .pop-item:hover{background:var(--bg)}
-.pop-me{font-size:12.5px;color:var(--muted);padding:8px 10px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pop-me{font-size:12.5px;color:var(--muted);padding:8px 10px 4px;overflow-wrap:anywhere}
 .mob-only{display:none}
 
 /* new order alert */
@@ -312,7 +312,7 @@ button.kpi:hover{border-color:#D8CFCE}
 .oc-grid{display:grid;grid-template-columns:1fr}
 .oc-grid>section{padding:12px 18px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .oc-grid>section+section{border-top:1px solid var(--line)}
-@container olist (min-width:760px){
+@container olist (min-width:900px){
   .oc-grid{grid-template-columns:1.05fr 1.2fr 1fr}
   .oc-grid>section+section{border-top:0;border-left:1px solid var(--line)}
   .oc-grid>section{padding:14px 18px}
@@ -443,3 +443,32 @@ button.kpi:hover{border-color:#D8CFCE}
 /* advance: quick choices */
 .adv-chips .chip{min-height:40px}
 #advNow{color:var(--ink);font-weight:500}
+
+/* ---------- fit on every phone and tablet: nothing overlaps, spills or is cut off ---------- */
+.pr span{overflow-wrap:anywhere}
+.tb-title h1 .ts{display:none}
+@media (max-width:760px){
+  .lrow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lrow>.sm.red{grid-column:1/-1;justify-self:end}
+}
+@media (max-width:480px){
+  .oc-steps{gap:4px}
+  .oc-steps li{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2;font-size:10.5px;overflow-wrap:break-word}
+  .kpi .s{white-space:normal}
+  .tb-title h1 .tl{display:none}
+  .tb-title h1 .ts{display:inline}
+}
+@media (max-width:420px){
+  .lrow{grid-template-columns:minmax(0,1fr)}
+  .lrow>.sm.red{grid-column:auto}
+}
+@media (max-width:380px){
+  .kpi .v{font-size:20px}
+  .kpi{padding:12px}
+  .tb-title h1{font-size:17px}
+  .topbar{gap:8px;padding-left:12px;padding-right:12px}
+  .tb-acts{gap:6px}
+}
+@media (max-width:360px){
+  .tb-logo{display:none!important}
+}

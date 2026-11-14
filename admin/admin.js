@@ -232,7 +232,8 @@ const PAGE = {
 function selectTab(t) {
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === t));
   TABS.forEach(k => $("tab-" + k).hidden = k !== t);
-  $("pageTitle").textContent = PAGE[t][0]; $("pageSub").textContent = PAGE[t][1];
+  const short = {theme: "Colours", business: "Business", pay: "Payments"}[t] || PAGE[t][0];
+  $("pageTitle").innerHTML = `<span class="tl">${esc(PAGE[t][0])}</span><span class="ts">${esc(short)}</span>`; $("pageSub").textContent = PAGE[t][1];
   $("saveBar").hidden = t === "orders" || t === "access";
   if (t === "theme") startPreview();
   if (t === "access") loadAccessList();
@@ -241,7 +242,8 @@ function selectTab(t) {
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dataset.tab));
 document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g && TABS.includes(g.dataset.goto)) selectTab(g.dataset.goto) });
 let ME = "";
-function renderMe() { const m = ME || "Owner"; $("meMail").textContent = m; $("meMail2").textContent = "Signed in as " + m; $("meAv").textContent = (m.replace(/[^A-Za-z]/g, "")[0] || "C").toUpperCase() }
+/* The email is shown in full; a line break is allowed before the "@" so a long address fits the side panel. */
+function renderMe() { const m = ME || "Owner", at = m.indexOf("@"); $("meMail").innerHTML = at > 0 ? esc(m.slice(0, at)) + "<wbr>" + esc(m.slice(at)) : esc(m); $("meMail").title = m; $("meMail2").textContent = "Signed in as " + m; $("meAv").textContent = (m.replace(/[^A-Za-z]/g, "")[0] || "C").toUpperCase() }
 
 /* =====================================================================
    ORDERS (private repository: orders.json; payment screenshots in proofs/)
@@ -812,7 +814,8 @@ function fillGoSelects() { M.querySelectorAll("[data-goes]").forEach(sel => { co
 
 function warns() {
   $("payWarn").hidden = !advSetting(S) || payAccounts(S).length > 0;
-  $("paySummary").textContent = "Customers see: " + paymentSummary(S);
+  const noTitle = (S.pay.accounts || []).filter(a => a && a.active !== false && String(a.number || "").trim() && !String(a.title || "").trim()).map(a => a.method || "an account");
+  $("titleWarn").hidden = !noTitle.length; $("titleWarnList").textContent = noTitle.join(", ");
   $("waWarn").hidden = intl(S.shop.wa).length >= 11;
 }
 $("areasBox").addEventListener("input", () => { S.shop.areas = [...new Set($("areasBox").value.split("\n").map(a => a.trim()).filter(Boolean))]; changed() });
@@ -839,7 +842,7 @@ M.addEventListener("input", e => {
   if (el.closest("#pEditor")) return;
   if (el.dataset.b) { let v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value;
     if (el.id === "pa-p") v = Math.min(100, Math.round(v));
-    setPath(S, el.dataset.b, v); changed(); if (el.id === "pa-p" || el.id === "pa-f") renderAdv(S.shop.advancePct); return }
+    setPath(S, el.dataset.b, v); changed(); if (el.id === "pa-p") renderAdv(S.shop.advancePct); return }
   if (el.dataset.ann != null) { const a = []; M.querySelectorAll("[data-ann]").forEach(x => a.push(x.value)); S.shop.announce = a.map(x => x.trim()).filter(Boolean); changed(); return }
   if (el.dataset.qp) { const [pi, si] = el.dataset.qp.split("|").map(Number), s = S.products[pi] && S.products[pi].sizes[si]; if (!s) return; s.price = Math.max(0, Math.round(+el.value || 0)); if (s.was && s.was <= s.price) s.was = 0; changed(); return }
   if (el.dataset.li) { const [path, i, k, kind] = el.dataset.li.split("|");

@@ -243,7 +243,9 @@ section h2{font-size:clamp(26px,2.8vw,36px)}
 
 /* cart drawer */
 #lines{display:flex;flex-direction:column;gap:12px}
-.cline{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center}
+.cline{display:grid;grid-template-columns:58px minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.bin{width:40px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted);display:grid;place-items:center;padding:0}
+.bin:hover{color:#B42318;border-color:#E9B8B2}
 .tots{border-top:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
 .tots .r,.paybox .r,.receipt .r{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:lining-nums tabular-nums}
 .receipt .r span:last-child,.tots .r span:last-child{white-space:nowrap;text-align:right}
@@ -540,3 +542,21 @@ body.has-cart .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .proof-skip{font-size:13px;text-align:left;margin-top:8px;padding:6px 0}
 .spin{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--brand);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* cart lines on small phones: photo, name, quantity and bin all fit */
+@media (max-width:400px){
+  .cline{grid-template-columns:46px minmax(0,1fr) auto auto;gap:8px}
+  .cline .mini{width:46px;height:46px}
+  .cline .qty button{width:32px}
+  .cline .qty span{min-width:22px}
+  .bin{width:36px}
+}
+
+/* small phones: the announcement and the delivery bar show their full text (the announcement keeps one fixed
+   height, so the page does not move when the message changes) */
+@media (max-width:640px){
+  .mloc .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+}
+@media (max-width:380px){
+  .announce p{white-space:normal;overflow:visible;text-overflow:clip;min-height:calc(2.6em + 10px);display:flex;align-items:center;justify-content:center}
+}
