@@ -36,5 +36,9 @@ export async function onRequest({request}) {
   DROP.forEach(h => headers.delete(h));
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Other websites may not show these pages inside a frame, so nobody can trick the owner into clicking admin buttons.
+  // The admin's own website preview (Colours & fonts) is on this same address, so it still works.
+  headers.set("X-Frame-Options", "SAMEORIGIN");
+  headers.set("Content-Security-Policy", "frame-ancestors 'self'");
   return new Response(request.method === "HEAD" ? null : upstream.body, {status: upstream.status, headers});
 }
