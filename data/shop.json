@@ -63,12 +63,13 @@
   "phone": "",
   "email": "",
   "hours": "",
-  "address": "",
-  "footAbout": "A small menu of two desserts, Tiramisu and Classic Lotus Crumb, offered in three sizes and delivered across Lahore.",
+  "address": "Bahria Town, Lahore",
+  "footAbout": "A small dessert kitchen in Bahria Town, Lahore: Tiramisu and Classic Lotus Crumb in three sizes, delivered across Lahore.",
   "advancePct": 75,
   "advanceFrom": 0,
   "delFee": 0,
-  "delText": "You pay the rider's fare on delivery"
+  "delText": "You pay the rider's fare on delivery",
+  "area": "Bahria Town"
  },
  "reg": {
   "owner": "",

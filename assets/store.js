@@ -203,7 +203,7 @@ function renderStory() {
 const waChat = text => "https://wa.me/" + intl(S.shop.wa) + "?text=" + encodeURIComponent(text);
 function renderChrome() {
   const s = S.shop, name = s.name || "Crum";
-  document.title = name + " | " + (S.products.map(p => p.name).join(" and ") || "Desserts") + (S.shop.city ? " desserts in " + S.shop.city : "");
+  document.title = name + (S.shop.area ? " " + S.shop.area : "") + " | " + (S.products.map(p => p.name).join(" and ") || "Desserts") + (S.shop.city ? " desserts, " + S.shop.city : "");
   $("logo").innerHTML = logoSVG(name); $("footLogo").innerHTML = logoSVG(name); $("menuLogo").innerHTML = logoSVG(name);
   $("logo").setAttribute("aria-label", name + " home");
   $("footAbout").textContent = s.footAbout || "";
@@ -647,7 +647,8 @@ function renderSchema() {
   const ld = {"@context": "https://schema.org", "@type": "Bakery", name: S.shop.name || "Crum", url: site, image: site + "images/share.jpg",
     description: S.shop.footAbout || S.shop.tagline || "", servesCuisine: "Desserts", currenciesAccepted: "PKR",
     ...(intl(S.shop.wa) ? {telephone: "+" + intl(S.shop.wa)} : {}),
-    ...(S.shop.city ? {areaServed: {"@type": "City", name: S.shop.city}, address: {"@type": "PostalAddress", addressLocality: S.shop.city, addressCountry: "PK"}} : {}),
+    ...(S.shop.area ? {alternateName: `${S.shop.name || "Crum"} ${S.shop.area}`} : {}),
+    ...(S.shop.city ? {areaServed: {"@type": "City", name: S.shop.city}, address: {"@type": "PostalAddress", ...(S.shop.area ? {streetAddress: S.shop.area} : {}), addressLocality: S.shop.city, addressRegion: "Punjab", addressCountry: "PK"}} : {}),
     ...(prices.length ? {priceRange: `${rs(Math.min(...prices))} – ${rs(Math.max(...prices))}`.replace(/ /g, " ")} : {}),
     hasMenu: {"@type": "Menu", hasMenuSection: S.products.map(p => ({"@type": "MenuSection", name: p.name,
       hasMenuItem: p.sizes.filter(s => s.name && s.price > 0).map(s => ({"@type": "MenuItem", name: `${p.name} (${s.name})`, description: p.line || "",
