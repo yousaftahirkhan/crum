@@ -439,3 +439,7 @@ button.kpi:hover{border-color:#D8CFCE}
 
 @media (max-width:899px){.mob-only{display:block}}
 .ib.ghost{color:rgba(244,233,229,.6)}
+
+/* advance: quick choices */
+.adv-chips .chip{min-height:40px}
+#advNow{color:var(--ink);font-weight:500}

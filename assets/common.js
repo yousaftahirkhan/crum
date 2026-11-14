@@ -56,8 +56,9 @@ const PAY_METHODS = ["JazzCash", "Easypaisa", "SadaPay", "NayaPay", "Raast", "MC
 const payAccounts = S => (S.pay.accounts || []).filter(a => a && a.active !== false && String(a.number || "").trim())
   .map(a => ({k: a.method || "Bank transfer", v: String(a.number).trim(), who: String(a.title || "").trim()}));
 
-/* Advance rule: orders below shop.advanceFrom (Rs) are cash on delivery; larger ones pay shop.advancePct, which the
-   shop asks for on WhatsApp only after accepting the order. advanceFrom 0 means every order pays the advance. */
+/* Advance rule, set in the admin (Payments): orders below shop.advanceFrom (Rs) are cash on delivery; larger ones pay
+   shop.advancePct at checkout, with the payment screenshot (0 = cash on delivery for every order, 100 = full payment).
+   advanceFrom 0 means every order pays the advance. */
 const advSetting = S => Math.min(100, Math.max(0, Math.round(+S.shop.advancePct || 0)));
 const advFrom = S => Math.max(0, Math.round(+S.shop.advanceFrom || 0));
 const advanceFor = (S, total) => advSetting(S) && total >= advFrom(S) ? advSetting(S) : 0;
@@ -69,6 +70,25 @@ function paymentSummary(S) {
   if (!from) return `Orders are ${how}.`;
   return `Orders under ${rs(from)} are paid in cash on delivery. Orders of ${rs(from)} or more are ${how}.`;
 }
+/* "How to order", written from the payment and delivery settings so it always matches them. */
+function howtoSteps(S) {
+  const pct = advSetting(S), from = advFrom(S), del = Math.max(0, Math.round(+S.shop.delFee || 0));
+  const where = S.shop.city ? ` in ${S.shop.city}` : "", part = pct > 0 && pct < 100, what = pct >= 100 ? "the full amount" : `the ${pct}% advance`;
+  const pay = !pct ? "Nothing is paid at checkout: every order is cash on delivery."
+    : (from ? `Orders under ${rs(from)} are cash on delivery. For orders of ${rs(from)} or more, pay ${what}` : `Pay ${what}`) + " to one of the accounts shown at checkout and upload the screenshot.";
+  return [
+    "Add desserts to your cart and enter your delivery details.",
+    pay,
+    "Place the order. Your WhatsApp chat with us opens with your order ID; tap Send.",
+    !pct ? "We confirm your order on WhatsApp." : from ? "We confirm your order on WhatsApp, after checking your payment if you paid at checkout." : "We check your payment and confirm your order on WhatsApp.",
+    part ? (from ? "We prepare your desserts fresh. For advance orders, we send you a photo of your ready order." : "We prepare your desserts fresh and send you a photo of your ready order.") : "We prepare your desserts fresh for the date you choose.",
+    (part ? `${from ? "For advance orders, you" : "You"} pay the remaining ${100 - pct}% after the photo. ` : "") + `Our rider delivers your order to your door${where}.` +
+      (!pct ? " You pay in cash when it arrives." : from ? " Cash on delivery orders are paid when they arrive." : "") + (del ? ` The ${rs(del)} delivery charge is included in your total.` : "")
+  ];
+}
+/* Lines added to the end of the terms, so payment and delivery terms always match the settings. */
+const autoTerms = S => [paymentSummary(S), +S.shop.delFee > 0 ? `Delivery charge: ${rs(Math.round(+S.shop.delFee))}, included in your total.` : ""].filter(Boolean);
+
 /* The safety promises shown to customers, built from the shop's settings so they always match. withAdvance adds the
    lines about paying an advance (leave it out for a cash on delivery order). */
 function safetyLines(S, withAdvance = advSetting(S) > 0) {

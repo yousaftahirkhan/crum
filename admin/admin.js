@@ -820,14 +820,26 @@ function fillBinds() {
   $("areasBox").value = (S.shop.areas || []).join("\n");
   renderAnnEd(); renderSlideEd(); renderWhyEd(); fillGoSelects();
   M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else if (!el.hasAttribute("data-goes")) el.value = v == null ? "" : v });
-  fillThumbs(); renderLists(); warns();
+  fillThumbs(); renderLists(); warns(); renderAdv(S.shop.advancePct);
 }
+/* Advance setting: quick choices, and a plain sentence saying what customers will see. */
+function renderAdv(v) {
+  v = Math.min(100, Math.max(0, Math.round(+v || 0)));
+  const from = advFrom(S), cod = from ? ` Orders under ${rs(from)} are cash on delivery.` : "";
+  $("advChips").querySelectorAll("[data-adv]").forEach(c => c.setAttribute("aria-pressed", String(+c.dataset.adv === v)));
+  $("advNow").textContent = v === 0 ? "Now: cash on delivery. Customers pay the full amount in cash when the order arrives."
+    : v === 100 ? "Now: full payment upfront at checkout, with the payment screenshot." + cod
+    : `Now: customers pay ${v}% at checkout with the payment screenshot, and the other ${100 - v}% after they see a photo of the ready order.` + cod;
+}
+$("advChips").addEventListener("click", e => { const c = e.target.closest("[data-adv]"); if (!c) return; const i = $("pa-p"); i.value = c.dataset.adv; i.dispatchEvent(new Event("input", {bubbles: true})) });
 function fillThumbs() { M.querySelectorAll("[data-thumb]").forEach(el => { const v = getPath(S, el.dataset.thumb); el.innerHTML = v ? `<img src="${esc(photoSrc(v))}" alt="">` : "None" }) }
 function changed() { warns(); markDirty() }
 M.addEventListener("input", e => {
   const el = e.target;
   if (el.closest("#pEditor")) return;
-  if (el.dataset.b) { const v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value; setPath(S, el.dataset.b, v); changed(); return }
+  if (el.dataset.b) { let v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value;
+    if (el.id === "pa-p") v = Math.min(100, Math.round(v));
+    setPath(S, el.dataset.b, v); changed(); if (el.id === "pa-p" || el.id === "pa-f") renderAdv(S.shop.advancePct); return }
   if (el.dataset.ann != null) { const a = []; M.querySelectorAll("[data-ann]").forEach(x => a.push(x.value)); S.shop.announce = a.map(x => x.trim()).filter(Boolean); changed(); return }
   if (el.dataset.qp) { const [pi, si] = el.dataset.qp.split("|").map(Number), s = S.products[pi] && S.products[pi].sizes[si]; if (!s) return; s.price = Math.max(0, Math.round(+el.value || 0)); if (s.was && s.was <= s.price) s.was = 0; changed(); return }
   if (el.dataset.li) { const [path, i, k, kind] = el.dataset.li.split("|");

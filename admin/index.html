@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Open+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600&family=Poppins:wght@400;500;600&family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500;600&family=Libre+Baskerville&family=Nunito+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,400&family=Manrope:wght@400;500&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=32">
-<link rel="stylesheet" href="admin.css?v=32">
+<link rel="stylesheet" href="../assets/base.css?v=33">
+<link rel="stylesheet" href="admin.css?v=33">
 </head>
 <body>
 
@@ -308,35 +308,35 @@
       </div>
       <div class="box">
         <h3>Policies</h3>
-        <label class="fld" for="po-h">How to order (one step per line; also shown on the homepage)<textarea id="po-h" data-b="policies.howto" rows="5"></textarea></label>
+        <label class="fld" for="po-h">How to order (one step per line; also shown on the homepage). Leave it blank and the steps are written for you from the payment and delivery settings.<textarea id="po-h" data-b="policies.howto" rows="5" placeholder="Written automatically from your payment and delivery settings"></textarea></label>
         <label class="fld" for="po-r">Refunds &amp; cancellations<textarea id="po-r" data-b="policies.refund" rows="4"></textarea></label>
-        <label class="fld" for="po-t">Terms &amp; conditions<textarea id="po-t" data-b="policies.terms" rows="4"></textarea></label>
+        <label class="fld" for="po-t">Terms &amp; conditions (the payment and delivery charge lines are added automatically)<textarea id="po-t" data-b="policies.terms" rows="4"></textarea></label>
         <label class="fld" for="po-p">Privacy policy<textarea id="po-p" data-b="policies.privacy" rows="3"></textarea></label>
       </div>
     </div>
 
     <!-- Payment & delivery -->
     <div class="panel" id="tab-pay" hidden>
-      <div class="banner warn" id="payWarn" hidden>No payment account is filled in yet. Add a JazzCash, Easypaisa or bank account so the acceptance message tells customers where to send the advance.</div>
+      <div class="banner warn" id="payWarn" hidden>No payment account is filled in yet. Add a JazzCash, Easypaisa or bank account so customers can pay at checkout.</div>
       <div class="banner warn" id="waWarn" hidden>The shop's WhatsApp number is blank (Business info → Contact). Until it is added, customers cannot send their order on WhatsApp.</div>
       <div class="box">
-        <h3>Payment rule</h3>
-        <p class="hint">Most customers in Pakistan prefer cash on delivery and are wary of paying an advance to a shop they do not know yet. Asking for an advance only on larger orders, after you accept them, keeps new customers comfortable while protecting you on Dawat orders.</p>
+        <h3>Advance payment</h3>
         <div class="two">
-          <label class="fld" for="pa-p">Advance
-            <select id="pa-p" data-b="shop.advancePct" data-n>
-              <option value="50">50% advance, balance on delivery</option>
-              <option value="100">Full payment in advance</option>
-              <option value="0">No advance: cash on delivery for every order</option>
-            </select></label>
-          <label class="fld" for="pa-f">Ask for the advance on orders of (Rs) or more<input id="pa-f" type="number" min="0" step="100" inputmode="numeric" data-b="shop.advanceFrom" data-n placeholder="3000"></label>
+          <label class="fld" for="pa-p">Advance customers pay when they order (%)<input id="pa-p" type="number" inputmode="numeric" min="0" max="100" step="5" data-b="shop.advancePct" data-n></label>
+          <label class="fld" for="pa-f">Only on orders of (Rs) or more<input id="pa-f" type="number" min="0" step="100" inputmode="numeric" data-b="shop.advanceFrom" data-n placeholder="3000"></label>
         </div>
-        <p class="hint">Orders below this amount are cash on delivery. Use 0 to ask for the advance on every order. The website's checkout, policies and "Pay with confidence" section update automatically.</p>
+        <div class="chips adv-chips" id="advChips">
+          <button class="chip" type="button" data-adv="0">Cash on delivery</button><button class="chip" type="button" data-adv="25">25%</button>
+          <button class="chip" type="button" data-adv="50">50%</button><button class="chip" type="button" data-adv="75">75%</button>
+          <button class="chip" type="button" data-adv="100">100% upfront</button>
+        </div>
+        <p class="hint" id="advNow"></p>
+        <p class="hint">Orders below the amount on the right are cash on delivery; use 0 there to ask every order for the advance. The checkout, "How to order", the terms and "Pay with confidence" on the website update by themselves.</p>
         <div class="banner" id="paySummary"></div>
       </div>
       <div class="box">
         <h3>Payment methods</h3>
-        <p class="hint">When you accept an order, every <b>Active</b> method below is included in the WhatsApp message to the customer. Switch a method to <b>Inactive</b> to leave it out without deleting it. Methods without an account number are left out.</p>
+        <p class="hint">Every <b>Active</b> method below is shown to customers at checkout and included in your WhatsApp payment messages. Switch a method to <b>Inactive</b> to leave it out without deleting it. Methods without an account number are left out.</p>
         <div data-list="pay.accounts"></div>
         <button class="sm" type="button" data-ladd="pay.accounts" style="align-self:start">+ Add payment method</button>
       </div>
@@ -432,9 +432,9 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/themes.js?v=32"></script>
-<script src="../assets/common.js?v=32"></script>
-<script src="config.js?v=32"></script>
-<script src="admin.js?v=32"></script>
+<script src="../assets/themes.js?v=33"></script>
+<script src="../assets/common.js?v=33"></script>
+<script src="config.js?v=33"></script>
+<script src="admin.js?v=33"></script>
 </body>
 </html>

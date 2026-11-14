@@ -183,8 +183,10 @@ function renderPromo() {
     <div class="hero-media" id="promoMedia">${ph.map((x, i) => `<img src="${esc(photoSrc(x))}" alt="" loading="lazy"${i ? "" : ` class="on"`}>`).join("")}</div>`;
   if (ph.length > 1 && !CALM) { let k = 0; promoT = setInterval(() => { const ims = $("promoMedia").querySelectorAll("img"); ims[k].classList.remove("on"); k = (k + 1) % ims.length; void ims[k].offsetWidth; ims[k].classList.add("on") }, 4000) }
 }
+/* The owner's own steps if they wrote some in the admin; otherwise written from the payment settings. */
+const stepLines = () => { const t = String((S.policies || {}).howto || "").split("\n").map(l => l.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(Boolean); return t.length ? t : howtoSteps(S) };
 function renderSteps() {
-  const t = String((S.policies || {}).howto || "").split("\n").map(l => l.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(Boolean);
+  const t = stepLines();
   $("howto").hidden = !t.length;
   $("steps").innerHTML = t.map(l => `<li>${esc(l)}</li>`).join("");
 }
@@ -325,7 +327,11 @@ $("logo").onclick = e => { e.preventDefault(); scrollTo({top: 0, behavior: "smoo
 const POL_T = {howto: "How to order", payment: "Payments & safety", refund: "Refunds & cancellations", terms: "Terms & conditions", privacy: "Privacy policy"};
 function openPolicy(k) {
   $("polTitle").textContent = POL_T[k] || "";
-  $("polBody").textContent = k === "payment" ? [paymentSummary(S), "", ...safetyLines(S).map(l => "• " + l)].join("\n") : (S.policies || {})[k] || "Coming soon.";
+  const P = S.policies || {};
+  $("polBody").textContent = k === "payment" ? [paymentSummary(S), "", ...safetyLines(S).map(l => "• " + l)].join("\n")
+    : k === "howto" ? stepLines().map((l, i) => `${i + 1}. ${l}`).join("\n")
+    : k === "terms" ? [String(P.terms || "").trim(), ...autoTerms(S).map(l => "• " + l)].filter(Boolean).join("\n")
+    : P[k] || "Coming soon.";
   show($("polModal"));
 }
 
