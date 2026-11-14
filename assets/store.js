@@ -203,7 +203,7 @@ function renderStory() {
 const waChat = text => "https://wa.me/" + intl(S.shop.wa) + "?text=" + encodeURIComponent(text);
 function renderChrome() {
   const s = S.shop, name = s.name || "Crum";
-  document.title = name + " | " + (S.products.map(p => p.name).join(" and ") || "Desserts");
+  document.title = name + " | " + (S.products.map(p => p.name).join(" and ") || "Desserts") + (S.shop.city ? " desserts in " + S.shop.city : "");
   $("logo").innerHTML = logoSVG(name); $("footLogo").innerHTML = logoSVG(name); $("menuLogo").innerHTML = logoSVG(name);
   $("logo").setAttribute("aria-label", name + " home");
   $("footAbout").textContent = s.footAbout || "";
