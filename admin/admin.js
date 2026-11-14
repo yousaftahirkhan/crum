@@ -15,7 +15,7 @@ const TOKEN_KEY = "crum-admin-token";
 
 document.querySelectorAll(".logoArt").forEach(el => el.innerHTML = logoSVG("Crum"));
 $("hRepo").textContent = REPO; $("hOrders").textContent = ORDERS_REPO; $("ordersRepoName").textContent = ORDERS_REPO;
-if (CFG.siteUrl) $("viewSite").href = CFG.siteUrl;
+if (CFG.siteUrl) $("viewSite").href = $("viewSite2").href = CFG.siteUrl;
 
 let TOKEN = "";
 let S = normalizeShop({});
@@ -71,8 +71,7 @@ async function signIn(t, mode = "user", who = "") {
     if (!ADMINS.includes(String(me.login).toLowerCase())) { const e = new GHError(403, "not admin"); e.notAdmin = me.login; throw e }
     who = "GitHub: " + me.login;
   }
-  $("whoAmI").textContent = who ? "Signed in as " + who : "";
-  ME = mode === "app" ? String(who || "").toLowerCase() : "";
+  ME = String(who || "").replace(/^GitHub: /, "").toLowerCase(); renderMe();
   await gh(SITE);
   try { await gh(ORD); ORDERS_OK = true } catch (e) { ORDERS_OK = false }
   await loadContent();
@@ -81,7 +80,7 @@ async function signIn(t, mode = "user", who = "") {
 function openApp() {
   $("booting").hidden = true; $("signin").hidden = true; $("app").hidden = false;
   const h = location.hash.slice(1); selectTab(TABS.includes(h) ? h : "orders");
-  loadOrders(); loadAdmins(); poll(); renderBell();
+  loadOrders(); poll(); renderBell();
 }
 const signInError = e => e && e.notAdmin ? `The GitHub account ${e.notAdmin} is not allowed to manage this shop.` : e && e.status === 401 ? "Your sign-in has expired. Please sign in again." : errText(e);
 function showSignin(msg, where = "google") {
@@ -108,39 +107,83 @@ async function authPost(path, body) {
   return d;
 }
 async function refreshAppToken() { const d = await authPost("/token", {session: SESSION}); TOKEN = d.token; TOKEN_EXP = d.token_exp; return d }
-/* Gmail + password + authenticator code. The first sign-in of a Gmail creates its password. */
+/* Step 1: Gmail and password (or the invite code, the first time). Step 2: the authenticator code; a person signing
+   in for the first time also chooses their password and adds Crum to their authenticator app with a QR code. */
 const LOGIN_ERR = {
-  not_allowed: "This Gmail is not allowed to manage this shop. Ask an admin to add it under Business info → Admin access.",
+  not_allowed: "This Gmail is not allowed to manage this shop. Ask someone with access to add it on the Access page.",
+  bad_password: "That password is not correct. If you have forgotten it, ask someone else with access to choose New invite code for you on the Access page.",
+  bad_invite: "That invite code is not correct. Check it, or ask the person who added you for a new one.",
+  invite_expired: "Your invitation has expired. Ask the person who added you to choose New invite code on the Access page.",
   bad_code: "That code is not correct. Use the newest code from the Crum entry in your authenticator app, and check that your phone's time is set automatically.",
-  bad_password: "That password is not correct. If you have forgotten it, ask another admin to reset it under Admin access.",
   weak_password: "Choose a password of at least 8 characters that is not only numbers.",
-  too_many: "Too many attempts. Please wait 15 minutes and try again."
+  too_many: "Too many attempts. Please wait 15 minutes and try again.",
+  busy: "Please try again in a moment."
 };
-let NEW_PW = false;
+let STEP1 = null; /* {email, password, setPw} while step 2 is showing */
 $("otp").addEventListener("input", () => { $("otp").value = $("otp").value.replace(/\D/g, "").slice(0, 6) });
-function askNewPassword(on) {
-  NEW_PW = on; $("newPw").hidden = !on; $("lgPassWrap").hidden = on; $("firstHint").hidden = on;
-  $("otpBtn").textContent = on ? "Create password and sign in" : "Sign in";
-  if (on) { $("lgNew").value = $("lgNew2").value = ""; $("lgNew").focus() }
+function backToStep1(msg) {
+  STEP1 = null; $("gStep2").hidden = true; $("pwForm").hidden = false; $("setupBox").hidden = true; $("newPw").hidden = true;
+  $("lgPass").value = ""; $("gMsg").textContent = msg || ""; $("lgPass").focus();
 }
 $("pwForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const email = $("lgEmail").value.trim().toLowerCase(), code = $("otp").value.replace(/\D/g, "");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("gMsg").textContent = "Enter your Gmail address."; return }
-  if (NEW_PW && $("lgNew").value !== $("lgNew2").value) { $("gMsg").textContent = "The two new passwords do not match."; return }
-  if (code.length !== 6) { $("gMsg").textContent = "Enter the 6-digit code from your authenticator app."; return }
+  const email = $("lgEmail").value.trim().toLowerCase(), password = $("lgPass").value;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("gMsg").textContent = "Enter your Gmail address."; $("lgEmail").focus(); return }
+  if (!password) { $("gMsg").textContent = "Enter your password, or your invite code if this is your first sign-in."; $("lgPass").focus(); return }
+  $("pwBtn").disabled = true; $("pwBtn").textContent = "Checking…"; $("gMsg").textContent = "";
+  let d;
+  try { d = await authPost("/login", {email, password}) }
+  catch (err) {
+    $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
+    if (["bad_password", "bad_invite"].includes(err.code)) { $("lgPass").value = ""; $("lgPass").focus() }
+    return;
+  } finally { $("pwBtn").disabled = false; $("pwBtn").textContent = "Continue" }
+  try { localStorage.setItem("crum-admin-email", email) } catch (err) {}
+  STEP1 = {email, password, setPw: !!d.set_password};
+  $("setupBox").hidden = !d.setup; $("newPw").hidden = !d.set_password; $("lgNew").value = $("lgNew2").value = "";
+  $("otpHint").innerHTML = d.setup ? "Then type the 6-digit code the app shows for <b>Crum</b> to finish."
+    : `Signing in as <b>${esc(email)}</b>. Enter the 6-digit code from the Crum entry in your authenticator app.`;
+  if (d.setup) { $("setupKey").textContent = String(d.secret || "").replace(/(.{4})/g, "$1 ").trim(); drawQr(d.otpauth) }
+  $("pwForm").hidden = true; $("gStep2").hidden = false; $("otp").value = "";
+  (d.set_password ? $("lgNew") : $("otp")).focus();
+});
+/* The QR code is drawn in the browser by a small library from cdnjs (checked against its published hash). */
+const QR_SRC = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js", QR_SRI = "sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1";
+let qrLib = null;
+function loadQrLib() {
+  return qrLib || (qrLib = new Promise((res, rej) => {
+    if (window.qrcode) return res(window.qrcode);
+    const sc = document.createElement("script"); sc.src = QR_SRC; sc.integrity = QR_SRI; sc.crossOrigin = "anonymous";
+    sc.onload = () => window.qrcode ? res(window.qrcode) : rej(new Error("qr")); sc.onerror = () => { qrLib = null; rej(new Error("qr")) };
+    document.head.appendChild(sc);
+  }));
+}
+async function drawQr(text) {
+  const box = $("setupQr"); box.innerHTML = `<span class="hint">Loading the QR code…</span>`;
+  try { const qr = (await loadQrLib())(0, "M"); qr.addData(text); qr.make(); box.innerHTML = qr.createSvgTag(5, 2) }
+  catch (e) { box.innerHTML = `<span class="hint">The QR code could not load. Use the setup key below instead.</span>` }
+}
+$("gRestart").onclick = () => backToStep1();
+$("gStep2").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!STEP1) { backToStep1(); return }
+  const code = $("otp").value.replace(/\D/g, "");
+  if (STEP1.setPw) {
+    if ($("lgNew").value.length < 8 || /^\d+$/.test($("lgNew").value)) { $("gMsg").textContent = LOGIN_ERR.weak_password; $("lgNew").focus(); return }
+    if ($("lgNew").value !== $("lgNew2").value) { $("gMsg").textContent = "The two new passwords do not match."; $("lgNew2").focus(); return }
+  }
+  if (code.length !== 6) { $("gMsg").textContent = "Enter the 6-digit code from your authenticator app."; $("otp").focus(); return }
   $("otpBtn").disabled = true; $("otpBtn").textContent = "Checking…"; $("gMsg").textContent = "";
   try {
-    const d = await authPost("/login", {email, password: $("lgPass").value, code, remember: $("trust").checked, ...(NEW_PW ? {new_password: $("lgNew").value} : {})});
+    const d = await authPost("/login", {email: STEP1.email, password: STEP1.password, code, remember: $("trust").checked, ...(STEP1.setPw ? {new_password: $("lgNew").value} : {})});
     SESSION = d.session; keepSession(d.session, d.session_exp, $("trust").checked); TOKEN_EXP = d.token_exp; dropToken();
-    try { localStorage.setItem("crum-admin-email", email) } catch (err) {}
+    STEP1 = null; $("lgPass").value = $("lgNew").value = $("lgNew2").value = "";
     await signIn(d.token, "app", d.email);
   } catch (err) {
-    if (err.code === "set_password") { askNewPassword(true); $("gMsg").textContent = ""; return }
+    if (["not_allowed", "invite_expired", "bad_password", "bad_invite"].includes(err.code)) { backToStep1(LOGIN_ERR[err.code]); return }
     $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
     if (err.code === "bad_code") { $("otp").value = ""; $("otp").focus() }
-    if (err.code === "bad_password") { $("lgPass").value = ""; $("lgPass").focus() }
-  } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = NEW_PW ? "Create password and sign in" : "Sign in" }
+  } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = "Verify and sign in" }
 });
 try { const m = localStorage.getItem("crum-admin-email"); if (m) $("lgEmail").value = m } catch (e) {}
 $("ghBtn").onclick = () => {
@@ -169,35 +212,36 @@ $("signinForm").addEventListener("submit", async e => {
   catch (err) { TOKEN = ""; $("signMsg").textContent = err && err.status === 401 ? "This access token is not valid or has expired. Check it and try again." : signInError(err) }
   finally { $("signBtn").disabled = false; $("signBtn").textContent = "Sign in with token" }
 });
-$("signOut").onclick = () => {
-  if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
+function signOutNow(force) {
+  if (force !== true && dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
   dirty = false; dropToken(); dropSession();
   history.replaceState(null, "", location.pathname); location.reload();
-};
+}
+$("signOut").onclick = signOutNow; $("signOut2").onclick = signOutNow;
 
-/* ---------- tabs ---------- */
-const TABS = ["orders", "menu", "home", "theme", "business", "pay"];
+/* ---------- sections ---------- */
+const TABS = ["orders", "menu", "home", "theme", "business", "pay", "access"];
 const PAGE = {
   orders: ["Orders", "Website orders arrive here on their own, with the customer's payment screenshot."],
   menu: ["Menu", "Desserts, sizes and prices. Changes go live when you publish."],
   home: ["Homepage", "The banner, messages and sections on the front page."],
   theme: ["Colours & fonts", "Preview the website in each colour theme and font style, and choose one of each."],
   business: ["Business info", "Shop name, delivery area, contact details and policies."],
-  pay: ["Payment & delivery", "The advance, your payment accounts and delivery charges."]};
+  pay: ["Payments & delivery", "The advance, the accounts customers pay into, and delivery charges."],
+  access: ["Access", "Who can sign in to this admin, and how to hand the shop to someone else."]};
 function selectTab(t) {
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === t));
   TABS.forEach(k => $("tab-" + k).hidden = k !== t);
   $("pageTitle").textContent = PAGE[t][0]; $("pageSub").textContent = PAGE[t][1];
-  $("saveBar").hidden = t === "orders";
+  $("saveBar").hidden = t === "orders" || t === "access";
   if (t === "theme") startPreview();
-  sidePanel(false);
-  history.replaceState(null, "", "#" + t); scrollTo(0, 0);
+  if (t === "access") loadAccessList();
+  closePops(); history.replaceState(null, "", "#" + t); scrollTo(0, 0);
 }
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dataset.tab));
-/* On phones the side panel slides in from the left. */
-function sidePanel(open) { $("app").classList.toggle("side-open", open); $("sideScrim").hidden = !open }
-$("sideOpen").onclick = () => sidePanel(true); $("sideScrim").onclick = () => sidePanel(false);
-document.addEventListener("keydown", e => { if (e.key === "Escape") sidePanel(false) });
+document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g && TABS.includes(g.dataset.goto)) selectTab(g.dataset.goto) });
+let ME = "";
+function renderMe() { const m = ME || "Owner"; $("meMail").textContent = m; $("meMail2").textContent = "Signed in as " + m; $("meAv").textContent = (m.replace(/[^A-Za-z]/g, "")[0] || "C").toUpperCase() }
 
 /* =====================================================================
    ORDERS (private repository: orders.json; payment screenshots in proofs/)
@@ -233,7 +277,9 @@ function closePops() { document.querySelectorAll(".pop").forEach(p => p.hidden =
 $("scrim").onclick = closeModal;
 document.querySelectorAll("[data-mclose]").forEach(b => b.onclick = closeModal);
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closePops() } });
-$("bellBtn").onclick = e => { e.stopPropagation(); const p = $("alertPop"), open = p.hidden; closePops(); p.hidden = !open; $("bellBtn").setAttribute("aria-expanded", String(open)); if (open) renderBell() };
+function togglePop(p, b) { const open = $(p).hidden; closePops(); if (open) { $(p).hidden = false; $(b).setAttribute("aria-expanded", "true") } return open }
+$("bellBtn").onclick = e => { e.stopPropagation(); if (togglePop("alertPop", "bellBtn")) renderBell() };
+$("moreBtn").onclick = e => { e.stopPropagation(); togglePop("morePop", "moreBtn") };
 document.addEventListener("click", e => { if (!e.target.closest(".popwrap")) closePops() });
 
 /* ---------- new order alerts ----------
@@ -973,62 +1019,108 @@ document.querySelectorAll("[data-dev]").forEach(b => b.onclick = () => {
 });
 
 /* =====================================================================
-   ADMIN ACCESS (private repository: admins.json = {"emails": [...]})
-   The sign-in service lets these Gmail addresses in (each with its own password and the authenticator code). Saved immediately, not on Publish.
+   ACCESS: who can sign in. The list is kept by the sign-in service (POST /api/access), which signs it and stores
+   each person's password hash and authenticator secret encrypted, so it can only be changed from here.
    ===================================================================== */
-let ADMINS_LIST = [], ADMINS_DOC = {}, adminsSha = null, adminsBusy = false, ME = "";
-const emailOk = s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
-async function loadAdmins() {
-  $("admMsg").textContent = "";
-  if (DEMO) { ADMINS_LIST = ADMINS_LIST.length ? ADMINS_LIST : ["yousaftahirkhan@gmail.com"]; renderAdmins(); return }
-  if (!ORDERS_OK) { $("admList").innerHTML = `<p class="hint" style="padding:10px 12px">Admin access needs the private order storage. Sign in with your Gmail and password to manage it.</p>`; return }
-  try {
-    const f = await gh(`${ORD}/contents/admins.json`);
-    ADMINS_DOC = JSON.parse(b64decUtf8(f.content || "")) || {}; ADMINS_LIST = (ADMINS_DOC.emails || []).map(s => String(s).toLowerCase()); adminsSha = f.sha;
-  } catch (e) { if (e.status === 404) { ADMINS_DOC = {}; ADMINS_LIST = []; adminsSha = null } else { $("admMsg").textContent = "The admin list could not load. " + errText(e); return } }
-  renderAdmins();
+let ACCESS = null, accBusy = false;
+const ADMIN_LINK = "https://crum.pages.dev/admin/";
+const ACC_ERR = {bad_email: "Enter a valid Gmail address, for example name@gmail.com.", exists: "This Gmail already has access.",
+  too_many_people: "Up to 10 people can have access.", last_admin: "You can't remove the last person who can sign in. Add someone else first.",
+  not_found: "This person no longer has access. The list has been refreshed.", busy: "Someone changed the list at the same time. Please try again.",
+  session_expired: "Your sign-in has expired. Sign out and sign in again.", mode: "Sign in with your Gmail and password to change who has access.",
+  bad_password: "Your current password is not correct.", weak_password: "Choose a password of at least 8 characters that is not only numbers.",
+  too_many: "Too many attempts. Please wait 15 minutes and try again."};
+const fmtDay = t => new Date(t).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+/* In the local preview the list lives only on this page. */
+let DEMO_ACC = {me: "yousaftahirkhan@gmail.com", managed: false, users: [{email: "yousaftahirkhan@gmail.com", name: "Yousaf Tahir Khan", status: "active", added: 0, activatedAt: 0, addedBy: ""}]};
+function demoAccess(op, x) {
+  const A = DEMO_ACC, i = A.users.findIndex(u => u.email === x.email), code = op === "add" || op === "reset" ? "demo-c0de" : "";
+  if (op === "add") A.users.push({email: x.email.toLowerCase(), name: x.name || "", status: "pending", added: Date.now(), activatedAt: 0, addedBy: A.me});
+  if (op === "remove") { if (A.users[i].status === "active" && A.users.filter(u => u.status === "active").length < 2) return Promise.reject(Object.assign(new Error("last_admin"), {code: "last_admin"})); A.users.splice(i, 1) }
+  if (op === "reset") A.users[i] = {...A.users[i], status: "pending", added: Date.now(), addedBy: A.me};
+  return Promise.resolve({...JSON.parse(JSON.stringify(A)), ...(code ? {invite: code, email: x.email} : {}), ...(op === "password" ? {changed: true} : {})});
 }
-function renderAdmins() {
-  const pw = ADMINS_DOC.passwords || {};
-  $("admList").innerHTML = ADMINS_LIST.length ? ADMINS_LIST.map(em => `<div class="adm-row"><span class="em">${esc(em)}<small>${pw[em] ? "Password set" : "Creates a password at first sign-in"}</small></span>${em === ME ? `<span class="src">You</span>` : ""}${pw[em] ? `<button class="sm" type="button" data-admreset="${esc(em)}">Reset password</button>` : ""}<button class="sm red" type="button" data-admrm="${esc(em)}"${ADMINS_LIST.length < 2 ? ` disabled title="At least one admin is needed"` : ""}>Remove</button></div>`).join("")
-    : `<p class="hint" style="padding:10px 12px">No list saved yet; the sign-in service uses the account set up with the website. Add your Gmail to start the list.</p>`;
+const accessCall = (op, extra = {}) => DEMO ? demoAccess(op, extra) : MODE === "app" && SESSION ? authPost("/access", {session: SESSION, op, ...extra}) : Promise.reject(Object.assign(new Error("mode"), {code: "mode"}));
+async function loadAccessList() {
+  const app = DEMO || (MODE === "app" && !!SESSION);
+  $("accessOff").hidden = app; $("accAdd").hidden = !app; $("accRefresh").hidden = !app; $("pwChange").hidden = !app;
+  if (!app) { $("accList").innerHTML = `<p class="hint">Sign in with your Gmail and password to see who has access.</p>`; return }
+  if (!ACCESS) $("accList").innerHTML = `<p class="hint">Loading…</p>`;
+  try { ACCESS = await accessCall("list"); renderAccess() }
+  catch (e) { $("accList").innerHTML = `<p class="msg err" style="text-align:left">${esc(ACC_ERR[e.code] || errText(e))}</p>` }
 }
-/* Saves the list; password hashes of Gmails that stay are kept (resetPw removes one so it is created again). */
-async function saveAdmins(next, message, resetPw) {
-  const docFor = () => { const pw = {...(ADMINS_DOC.passwords || {})}; for (const k of Object.keys(pw)) if (!next.includes(k) || k === resetPw) delete pw[k]; return {...ADMINS_DOC, emails: next, passwords: pw} };
-  if (DEMO) { ADMINS_DOC = docFor(); ADMINS_LIST = next; renderAdmins(); toast("Saved (local preview only)"); return true }
-  if (adminsBusy) return false; adminsBusy = true;
-  try {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const doc = docFor();
-        const r = await gh(`${ORD}/contents/admins.json`, {method: "PUT", body: {message, content: b64encUtf8(JSON.stringify(doc, null, 1) + "\n"), ...(adminsSha ? {sha: adminsSha} : {})}});
-        ADMINS_DOC = doc; ADMINS_LIST = next; adminsSha = r.content.sha; renderAdmins(); return true;
-      } catch (e) { if ((e.status === 409 || e.status === 422) && attempt === 0) { await loadAdmins(); continue } throw e }
-    }
-  } catch (e) { $("admMsg").textContent = "Not saved. " + errText(e); return false }
-  finally { adminsBusy = false }
-  return false;
+function renderAccess() {
+  const A = ACCESS; if (!A) return;
+  const active = A.users.filter(u => u.status === "active").length;
+  $("accCount").textContent = A.users.length;
+  $("accList").innerHTML = A.users.map(u => {
+    const me = u.email === A.me, nm = u.name || u.email.split("@")[0];
+    const pill = u.status === "active" ? `<span class="pill s-sent">Active</span>` : u.status === "expired" ? `<span class="pill s-cancel">Invitation expired</span>` : `<span class="pill s-new">Waiting for first sign-in</span>`;
+    const note = u.status === "active" ? (u.activatedAt ? "Set up on " + fmtDay(u.activatedAt) : "Original owner account")
+      : u.status === "expired" ? "Invited on " + fmtDay(u.added) + ". Choose New invite code to give them another 14 days."
+      : `Invited on ${fmtDay(u.added)}${u.addedBy ? " by " + u.addedBy : ""}. Expires on ${fmtDay(u.added + 14 * 864e5)}.`;
+    const last = u.status === "active" && active <= 1;
+    return `<div class="acc-row" data-email="${esc(u.email)}">
+      <span class="av" aria-hidden="true">${esc((nm.replace(/[^A-Za-z]/g, "")[0] || "?").toUpperCase())}</span>
+      <div class="acc-t"><b>${esc(nm)}${me ? ` <span class="tag">You</span>` : ""}</b><span class="em">${esc(u.email)}</span><span class="sub">${esc(note)}</span></div>
+      ${pill}
+      <div class="acc-a"><button class="sm" type="button" data-acc="reset">New invite code</button><button class="sm red" type="button" data-acc="remove"${last ? ` disabled title="The last person who can sign in cannot be removed"` : ""}>Remove</button></div>
+    </div>`;
+  }).join("") || `<p class="hint">Nobody yet.</p>`;
 }
-$("admForm").addEventListener("submit", async e => {
-  e.preventDefault(); $("admMsg").textContent = "";
-  const em = $("admNew").value.trim().toLowerCase();
-  if (!emailOk(em)) { $("admMsg").textContent = "Enter a full Gmail address, for example name@gmail.com."; return }
-  if (ADMINS_LIST.includes(em)) { $("admMsg").textContent = "This Gmail already has access."; return }
-  $("admAdd").disabled = true;
-  if (await saveAdmins([...ADMINS_LIST, em], "Admin access: add " + em)) { $("admNew").value = ""; toast(em + " can now sign in") }
-  $("admAdd").disabled = false;
+const inviteMessage = (email, code) => `You have been given access to the Crum super admin.\n\n1. Open ${ADMIN_LINK}\n2. Sign in with ${email} and type this invite code in the password box: ${code}\n3. Choose your own password and scan the QR code with an authenticator app (Google Authenticator or Microsoft Authenticator).\n\nThe code works once and lasts 14 days.`;
+let INVITE = null;
+function showInvite(email, code, again) {
+  INVITE = {email, code};
+  $("invTitle").textContent = again ? "New invite code" : "Access given";
+  $("invHint").textContent = `Send this invite code to ${email} with the admin link. They type it in the password box at their first sign-in.`;
+  $("invCode").textContent = code; $("accInvite").hidden = false;
+  $("accInvite").scrollIntoView({behavior: "smooth", block: "center"});
+}
+const copyText = (text, ok) => navigator.clipboard.writeText(text).then(() => toast(ok)).catch(() => prompt("Copy this:", text));
+$("invCopy").onclick = () => { if (INVITE) copyText(inviteMessage(INVITE.email, INVITE.code), "Message copied. Send it to them on WhatsApp.") };
+$("invDone").onclick = () => { INVITE = null; $("accInvite").hidden = true; $("invCode").textContent = "" };
+$("accRefresh").onclick = () => { ACCESS = null; loadAccessList() };
+$("accCopy").onclick = () => copyText(ADMIN_LINK, "Admin link copied");
+$("accAdd").addEventListener("submit", async e => {
+  e.preventDefault(); if (accBusy) return;
+  const email = $("accEmail").value.trim(), name = $("accName").value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { $("accMsg").textContent = ACC_ERR.bad_email; $("accEmail").focus(); return }
+  accBusy = true; $("accAddBtn").disabled = true; $("accMsg").textContent = "";
+  try { const d = await accessCall("add", {email, name}); ACCESS = d; renderAccess(); $("accEmail").value = ""; $("accName").value = ""; showInvite(d.email, d.invite) }
+  catch (err) { $("accMsg").textContent = ACC_ERR[err.code] || errText(err) }
+  finally { accBusy = false; $("accAddBtn").disabled = false }
 });
-$("admList").addEventListener("click", async e => {
-  const rp = e.target.closest("[data-admreset]");
-  if (rp) { const em = rp.dataset.admreset;
-    if (!confirm(`Reset the password for ${em}? At the next sign-in, that person creates a new password using the authenticator code.`)) return;
-    rp.disabled = true; if (await saveAdmins(ADMINS_LIST, "Admin access: password reset for " + em, em)) toast("Password reset for " + em); else rp.disabled = false; return }
-  const b = e.target.closest("[data-admrm]"); if (!b) return;
-  const em = b.dataset.admrm; if (ADMINS_LIST.length < 2) return;
-  if (!confirm(em === ME ? `You are signed in with ${em}. Remove it? You will not be able to sign in with this Gmail again.` : `Remove ${em}? This Gmail will no longer be able to sign in.`)) return;
-  b.disabled = true;
-  if (await saveAdmins(ADMINS_LIST.filter(x => x !== em), "Admin access: remove " + em)) toast(em + " removed"); else b.disabled = false;
+/* Remove and New invite code ask for a second tap before they act. */
+$("accList").addEventListener("click", async e => {
+  const b = e.target.closest("[data-acc]"); if (!b || b.disabled || accBusy) return;
+  const email = b.closest(".acc-row").dataset.email, op = b.dataset.acc, me = !!ACCESS && email === ACCESS.me;
+  if (b.dataset.sure !== "1") {
+    const old = b.textContent; b.dataset.sure = "1";
+    b.textContent = op === "remove" ? (me ? "Remove me? Tap again" : "Tap again to remove") : me ? "Sign me out? Tap again" : "Tap again to confirm";
+    setTimeout(() => { if (b.isConnected && b.dataset.sure === "1") { b.dataset.sure = ""; b.textContent = old } }, 4000);
+    return;
+  }
+  accBusy = true; b.disabled = true;
+  try {
+    const d = await accessCall(op, {email}); ACCESS = d; renderAccess();
+    if (op === "reset") showInvite(d.email, d.invite, true);
+    if (me && op === "remove") { toast("Your access was removed. Signing you out…"); setTimeout(() => signOutNow(true), 1600); return }
+    if (me) { toast("Write down your new invite code. You will be signed out in 20 seconds."); setTimeout(() => signOutNow(true), 20000); return }
+    toast(op === "remove" ? "Access removed for " + email : "New invite code made. They were signed out.");
+  } catch (err) { toast(ACC_ERR[err.code] || errText(err)); if (err.code === "not_found") { ACCESS = null; loadAccessList() } }
+  finally { accBusy = false; if (b.isConnected) b.disabled = false }
+});
+$("pwChange").addEventListener("submit", async e => {
+  e.preventDefault(); if (accBusy) return;
+  const nw = $("pcNew").value;
+  if (!$("pcOld").value) { $("pcMsg").textContent = "Enter your current password."; $("pcOld").focus(); return }
+  if (nw.length < 8 || /^\d+$/.test(nw)) { $("pcMsg").textContent = ACC_ERR.weak_password; $("pcNew").focus(); return }
+  if (nw !== $("pcNew2").value) { $("pcMsg").textContent = "The two new passwords do not match."; $("pcNew2").focus(); return }
+  accBusy = true; $("pcBtn").disabled = true; $("pcMsg").textContent = "";
+  try { await accessCall("password", {password: $("pcOld").value, new_password: nw}); $("pcOld").value = $("pcNew").value = $("pcNew2").value = ""; toast("Password changed. Use the new one next time you sign in.") }
+  catch (err) { $("pcMsg").textContent = ACC_ERR[err.code] || errText(err) }
+  finally { accBusy = false; $("pcBtn").disabled = false }
 });
 
 /* Local preview only: made-up orders, one at each kind of step, so the order screen can be tried out. */
@@ -1048,7 +1140,7 @@ function sampleOrders() {
 /* ---------- start ---------- */
 (async () => {
   if (DEMO) {
-    $("demoBar").hidden = false; ORDERS_OK = true; $("whoAmI").textContent = "Local preview";
+    $("demoBar").hidden = false; ORDERS_OK = true; ME = "yousaftahirkhan@gmail.com"; renderMe();
     try { await loadContent(); ORDERS = sampleOrders(); openApp() } catch (e) { $("booting").textContent = "The local shop data could not load." }
     return;
   }

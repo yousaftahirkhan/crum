@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Open+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600&family=Poppins:wght@400;500;600&family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500;600&family=Libre+Baskerville&family=Nunito+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,400&family=Manrope:wght@400;500&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=31">
-<link rel="stylesheet" href="admin.css?v=31">
+<link rel="stylesheet" href="../assets/base.css?v=32">
+<link rel="stylesheet" href="admin.css?v=32">
 </head>
 <body>
 
@@ -27,17 +27,29 @@
     </div>
     <div class="form" id="gSignin">
       <form class="form" id="pwForm" novalidate>
-        <label for="lgEmail">Gmail<input id="lgEmail" type="email" inputmode="email" autocomplete="username" placeholder="name@gmail.com"></label>
-        <label for="lgPass" id="lgPassWrap">Password<input id="lgPass" type="password" autocomplete="current-password"></label>
+        <div class="eyebrow">Step 1 of 2</div>
+        <label for="lgEmail">Gmail<input id="lgEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@gmail.com"></label>
+        <label for="lgPass">Password<input id="lgPass" type="password" autocomplete="current-password"></label>
+        <button class="btn brand block" type="submit" id="pwBtn">Continue</button>
+        <p class="hint" style="text-align:center">New here? Type the invite code you were given in the password box.</p>
+      </form>
+      <form class="form" id="gStep2" hidden autocomplete="off" novalidate>
+        <div class="eyebrow">Step 2 of 2</div>
+        <div class="setup" id="setupBox" hidden>
+          <p class="hint"><b>Welcome! First, set up your authenticator.</b> Open Google Authenticator or Microsoft Authenticator on your phone, tap <b>+</b> and scan this code.</p>
+          <div class="qr" id="setupQr"></div>
+          <p class="hint">Can't scan it? In the app choose <b>Enter a setup key</b> and type this key: <code id="setupKey"></code></p>
+        </div>
         <div class="form" id="newPw" hidden>
-          <p class="banner">This is your first sign-in. Choose a password of at least 8 characters, not only numbers.</p>
+          <p class="hint">Choose your password: at least 8 characters, not only numbers.</p>
           <label for="lgNew">New password<input id="lgNew" type="password" autocomplete="new-password"></label>
           <label for="lgNew2">Repeat the new password<input id="lgNew2" type="password" autocomplete="new-password"></label>
         </div>
-        <label for="otp">6-digit code from the Crum entry in your authenticator app<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
+        <p class="hint" id="otpHint"></p>
+        <label for="otp">Authenticator code<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
         <label class="toggle" for="trust"><input type="checkbox" id="trust"> Keep me signed in on this device for 30 days</label>
-        <button class="btn brand block" type="submit" id="otpBtn">Sign in</button>
-        <p class="hint" id="firstHint" style="text-align:center">First time? Leave the password blank; you will be asked to create one.</p>
+        <button class="btn brand block" type="submit" id="otpBtn">Verify and sign in</button>
+        <button class="link" type="button" id="gRestart" style="align-self:center">Use a different account</button>
       </form>
       <div class="msg err" id="gMsg" role="alert"></div>
     </div>
@@ -73,28 +85,30 @@
 
 <!-- Admin app: side panel + page -->
 <div id="app" class="shell" hidden>
-  <aside class="side" id="side" aria-label="Super admin">
-    <div class="sbrand"><span class="logoArt"></span><span class="role">Super admin</span></div>
-    <nav class="snav" role="tablist" aria-orientation="vertical" aria-label="Sections">
-        <button class="tab" role="tab" data-tab="orders" aria-selected="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span>Orders</span><span class="nb" id="navNew" hidden>0</span></button>
-        <button class="tab" role="tab" data-tab="menu" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1.4 10.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8z"/><path d="M4 9h16M9 5.5c0-1 1-1.5 3-1.5s3 .5 3 1.5"/></svg><span>Menu</span></button>
-        <button class="tab" role="tab" data-tab="home" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/></svg><span>Homepage</span></button>
-        <button class="tab" role="tab" data-tab="theme" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 20.5c-1.5 0-2-1-2-2s1-1.7 2.2-1.7H14a3 3 0 0 0 3-3"/></svg><span>Colours &amp; fonts</span></button>
-        <button class="tab" role="tab" data-tab="business" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M4 20h16"/></svg><span>Business info</span></button>
-        <button class="tab" role="tab" data-tab="pay" aria-selected="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Payment &amp; delivery</span></button>
+  <aside class="side" aria-label="Super admin">
+    <div class="side-brand"><span class="logoArt"></span><span class="role">Super admin</span></div>
+    <nav class="side-nav" role="tablist" aria-label="Sections">
+      <button class="tab" type="button" role="tab" data-tab="orders" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span class="t">Orders</span><span class="cnt" id="navNew" hidden>0</span></button>
+      <button class="tab" type="button" role="tab" data-tab="menu" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1.4 10.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8z"/><path d="M4 9h16M9 5.5c0-1 1-1.5 3-1.5s3 .5 3 1.5"/></svg><span class="t">Menu</span></button>
+      <button class="tab" type="button" role="tab" data-tab="home" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg><span class="t">Homepage</span></button>
+      <button class="tab" type="button" role="tab" data-tab="theme" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 20.5c-1.5 0-2-1-2-2s1-1.7 2.2-1.7H14a3 3 0 0 0 3-3"/></svg><span class="t">Colours &amp; fonts</span></button>
+      <button class="tab" type="button" role="tab" data-tab="business" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10"/><path d="M3 10l2-6h14l2 6"/><path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg><span class="t">Business</span></button>
+      <button class="tab" type="button" role="tab" data-tab="pay" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span class="t">Payments</span></button>
+      <button class="tab" type="button" role="tab" data-tab="access" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span class="t">Access</span></button>
     </nav>
-    <div class="sfoot">
-      <a class="sitem" id="viewSite" href="../" target="_blank" rel="noopener"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>View website</a>
-      <button class="sitem" type="button" id="signOut"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>Sign out</button>
-      <div class="who" id="whoAmI"></div>
+    <div class="side-foot">
+      <a class="side-link" id="viewSite" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span>View website</span></a>
+      <div class="me"><span class="av" id="meAv">C</span><span class="me-t"><b>Signed in</b><span id="meMail">Owner</span></span><button class="ib ghost" type="button" id="signOut" title="Sign out" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg></button></div>
     </div>
   </aside>
-  <div class="side-scrim" id="sideScrim" hidden></div>
+
   <div class="page">
     <div class="demo" id="demoBar" hidden>Local preview on this computer. Nothing is saved or published from here.</div>
-    <header class="ptop">
-      <button class="menu-btn" type="button" id="sideOpen" aria-label="Open the side panel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <div class="ptxt"><h1 id="pageTitle">Orders</h1><p class="hint" id="pageSub"></p></div>
+    <header class="topbar">
+      <div class="tb-title">
+        <span class="logoArt tb-logo"></span>
+        <div class="tb-text"><h1 id="pageTitle">Orders</h1><p id="pageSub"></p></div>
+      </div>
       <div class="tb-acts">
         <span class="live" id="liveSt" title="New orders are checked every 20 seconds"><i></i><span id="liveTxt">Live</span></span>
         <div class="popwrap">
@@ -105,6 +119,16 @@
             <p class="hint" id="soundHint"></p>
             <div class="pop-acts"><button class="sm" type="button" id="alertTest">Play test sound</button><button class="sm" type="button" id="alertNotif">Turn on notifications</button></div>
             <p class="hint">Keep this page open to hear new orders. It checks for them every 20 seconds.</p>
+          </div>
+        </div>
+        <div class="popwrap mob-only">
+          <button class="ib" type="button" id="moreBtn" aria-label="More" aria-expanded="false" aria-controls="morePop"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
+          <div class="pop menu" id="morePop" hidden>
+            <span class="pop-me" id="meMail2"></span>
+            <button class="pop-item" type="button" data-goto="theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 20.5c-1.5 0-2-1-2-2s1-1.7 2.2-1.7H14a3 3 0 0 0 3-3"/></svg>Colours &amp; fonts</button>
+            <button class="pop-item" type="button" data-goto="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Access and sign-in</button>
+            <a class="pop-item" id="viewSite2" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>View website</a>
+            <button class="pop-item" type="button" id="signOut2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>Sign out</button>
           </div>
         </div>
       </div>
@@ -269,16 +293,6 @@
           <label class="fld" for="s-t">TikTok link<input id="s-t" data-b="social.tiktok" placeholder="https://tiktok.com/@…"></label>
         </div>
       </div>
-      <div class="box" id="adminsBox">
-        <h3>Admin access</h3>
-        <p class="hint">Gmail addresses that can sign in to this super admin. Each signs in with its own password plus the 6-digit code from the <b>Crum</b> entry in the authenticator app; a newly added Gmail creates its password at its first sign-in. To change your Gmail, add the new one first, sign in with it, then remove the old one. <b>Reset password</b> lets that person create a new one. Changes here are saved straight away.</p>
-        <div id="admList" class="adm-list"></div>
-        <form class="adm-add" id="admForm" autocomplete="off" novalidate>
-          <input id="admNew" type="email" inputmode="email" placeholder="name@gmail.com" aria-label="Gmail address to add">
-          <button class="btn dark" type="submit" id="admAdd">Add Gmail</button>
-        </form>
-        <div class="msg err" id="admMsg" style="text-align:left"></div>
-      </div>
       <div class="box">
         <h3>Owner and registration</h3>
         <p class="hint">Blank fields are not shown on the website.</p>
@@ -335,6 +349,54 @@
         <p class="hint">Leave the charge at 0 if the customer pays the rider directly; the cart then shows "Paid to rider".</p>
       </div>
     </div>
+
+    <!-- Access -->
+    <div class="panel" id="tab-access" hidden>
+      <div class="banner">Everyone listed here signs in with their own Gmail, their own password and their own authenticator code, and can manage the whole shop: orders, the menu, payments and this list.</div>
+      <div class="banner warn" id="accessOff" hidden>You signed in with GitHub. Sign out and sign in with your Gmail and password to see or change who has access.</div>
+      <div class="box">
+        <div class="box-h"><h3>People with access (<span id="accCount">0</span>)</h3><button class="sm" type="button" id="accRefresh">Refresh</button></div>
+        <div id="accList" class="acc-list"></div>
+      </div>
+      <div class="box invite" id="accInvite" hidden>
+        <h3 id="invTitle">Invite code</h3>
+        <p class="hint" id="invHint"></p>
+        <div class="inv-code" id="invCode"></div>
+        <div class="acc-btns"><button class="btn brand md" type="button" id="invCopy">Copy the message for them</button><button class="sm" type="button" id="invDone">Done</button></div>
+        <p class="hint">This code is shown only once. It works one time and lasts 14 days. If it is lost, choose <b>New invite code</b> next to their name.</p>
+      </div>
+      <form class="box" id="accAdd" novalidate>
+        <h3>Give someone access</h3>
+        <div class="two">
+          <label class="fld" for="accEmail">Their Gmail<input id="accEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="name@gmail.com"></label>
+          <label class="fld" for="accName">Name (optional)<input id="accName" maxlength="40" autocomplete="off" placeholder="e.g. Sara"></label>
+        </div>
+        <div class="acc-btns"><button class="btn brand md" type="submit" id="accAddBtn">Give access</button><button class="sm" type="button" id="accCopy">Copy the admin link</button></div>
+        <p class="hint">You then get a one-time invite code. Send it to them with the admin link, <b>crum.pages.dev/admin</b>. They sign in with this Gmail and the invite code, choose their own password and, the first time, scan a QR code with an authenticator app on their phone. The invitation lasts 14 days.</p>
+        <div class="msg err" id="accMsg" role="alert"></div>
+      </form>
+      <form class="box" id="pwChange" novalidate autocomplete="off">
+        <h3>Your password</h3>
+        <div class="three">
+          <label class="fld" for="pcOld">Current password<input id="pcOld" type="password" autocomplete="current-password"></label>
+          <label class="fld" for="pcNew">New password<input id="pcNew" type="password" autocomplete="new-password"></label>
+          <label class="fld" for="pcNew2">Repeat the new password<input id="pcNew2" type="password" autocomplete="new-password"></label>
+        </div>
+        <div class="acc-btns"><button class="btn dark md" type="submit" id="pcBtn">Change password</button></div>
+        <p class="hint">At least 8 characters, not only numbers. Your authenticator stays the same.</p>
+        <div class="msg err" id="pcMsg" role="alert"></div>
+      </form>
+      <div class="box">
+        <h3>Handing the shop to someone else</h3>
+        <ol class="acc-steps">
+          <li>Add their Gmail above and send them the admin link with their invite code.</li>
+          <li>They sign in, choose their own password and set up their own authenticator app.</li>
+          <li>They change the WhatsApp number and email in <button class="link" type="button" data-goto="business">Business</button>, and the payment accounts in <button class="link" type="button" data-goto="pay">Payments</button>.</li>
+          <li>Remove your own access here. You are signed out straight away.</li>
+        </ol>
+        <p class="hint">New phone or forgotten password? Ask another person on this list to choose <b>New invite code</b> for you, then sign in with that code, choose a new password and scan the new QR code.</p>
+      </div>
+    </div>
   </main>
 
   <div class="savebar" id="saveBar" hidden>
@@ -370,9 +432,9 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/themes.js?v=31"></script>
-<script src="../assets/common.js?v=31"></script>
-<script src="config.js?v=31"></script>
-<script src="admin.js?v=31"></script>
+<script src="../assets/themes.js?v=32"></script>
+<script src="../assets/common.js?v=32"></script>
+<script src="config.js?v=32"></script>
+<script src="admin.js?v=32"></script>
 </body>
 </html>

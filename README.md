@@ -45,13 +45,18 @@ Tiramisu Cocoa, Strawberry Milk, Pistachio Cream, Midnight Cocoa).
 
 ## Signing in to the super admin
 
-- **Main sign-in:** Gmail + password + the 6-digit code from the **Crum** entry in an authenticator app, all checked by
-  the service at `/api`, which then gives the admin a 1-hour key limited to the two shop repositories. A Gmail that has
-  no password yet creates one at its first sign-in (the authenticator code is still required). Passwords are stored only
-  as PBKDF2 hashes in `admins.json`.
-- **Who can sign in:** Super admin → Business info → **Admin access** (add, remove, reset password). The list is saved as
-  `admins.json` in the private `crum-orders` repository. To change Gmail, add the new address first, sign in with it, then remove the old one. If the file is missing,
-  the service falls back to its private `ALLOWED_EMAILS` setting.
+- **Main sign-in:** Gmail + password, then the 6-digit code from the **Crum** entry in that person's own
+  authenticator app, all checked by the service at `/api`, which then gives the admin a 1-hour key limited to the two
+  shop repositories.
+- **Who can sign in:** Super admin → **Access** (as on Giftoria Atelier). *Give access* creates a one-time invite code,
+  shown once; the new person signs in with their Gmail and that code, chooses their own password and scans a QR code
+  for their own authenticator. *New invite code* is for a lost phone, a forgotten password or an expired invitation
+  (it also signs that person out). Up to 10 people; the last one cannot be removed. Each person changes their own
+  password on the same page.
+- **Where it is kept:** `access.json` in the private `crum-orders` repository, signed by the service, with passwords as
+  PBKDF2 hashes and authenticator secrets encrypted, so an edit made directly on GitHub is ignored. If the file is
+  missing or has been edited outside the admin, the service falls back to the `ALLOWED_EMAILS` and `TOTP_SECRET`
+  secrets, with the password saved in `admins.json`, so the owner can always get back in.
 - **Phone numbers:** the WhatsApp number is under Business info → Contact; payment numbers (JazzCash, Easypaisa, banks)
   are under Payment & delivery, each with an Active / Inactive switch.
 - **Other ways:** *Sign in with GitHub*, or a [fine-grained access token](https://github.com/settings/personal-access-tokens/new)

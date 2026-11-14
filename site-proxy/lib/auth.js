@@ -1,12 +1,12 @@
 /* Crum: sign-in and order service, served at https://crum.pages.dev/api/ (functions/api/[[route]].js).
 
-   Main sign-in (POST /login): the owner types their Gmail, their password and the 6-digit code from the "Crum" entry
+   Main sign-in (POST /login): a person types their Gmail, their password and the 6-digit code from the "Crum" entry
    in their authenticator app. This service checks all three and returns (a) a signed session that lasts 12 hours,
    or 30 days on a trusted device, and (b) a 1-hour GitHub token limited to the two shop repositories.
    POST /token swaps a valid session for a fresh 1-hour token.
 
-   Allowed accounts: admins.json in the private orders repository, which the super admin edits under Business info →
-   Admin access (see admins() below). If it lists no emails, the ALLOWED_EMAILS secret is used.
+   Who can sign in: access.json in the private orders repository, managed on the super admin's Access page (POST
+   /access, see "who may sign in" below). Each person has their own password and their own authenticator.
 
    Alternative sign-in (GET /callback): "Sign in with GitHub". GitHub checks the password and authenticator code;
    this service swaps GitHub's one-time code for an 8-hour user token and returns it in the URL fragment.
@@ -15,7 +15,8 @@
      ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
      ALLOWED_EMAILS*, TOTP_SECRET*, SESSION_SECRET*, GITHUB_APP_PRIVATE_KEY*, GITHUB_CLIENT_SECRET*
    Changing SESSION_VERSION signs everyone out.                                                                     */
-import {checkTotp, makeSession, readSession, installationToken, hashPassword, verifyPassword, passwordOk, recentOrderNo, imageKind, randomId} from "./lib.js";
+import {checkTotp, makeSession, readSession, installationToken, hashPassword, verifyPassword, passwordOk, recentOrderNo, imageKind, randomId,
+  newTotpSecret, otpauthUri, sealText, openText, signAccess, verifyAccess, newInviteCode, cleanInvite} from "./lib.js";
 
 const UA = "crum-auth";
 const SHORT = 12 * 3600e3, LONG = 30 * 864e5;
@@ -27,6 +28,7 @@ export default {
     try {
       if (url.pathname === "/login" && request.method === "POST") return await login(request, env);
       if (url.pathname === "/token" && request.method === "POST") return await refresh(request, env);
+      if (url.pathname === "/access" && request.method === "POST") return await manageAccess(request, env);
       if (url.pathname === "/order" && request.method === "POST") return await placeOrder(request, env);
       if (url.pathname === "/proof" && request.method === "POST") return await saveProof(request, env);
       if (url.pathname === "/callback") return await githubCallback(url, env);
@@ -54,39 +56,81 @@ async function repoToken(env) {
   tokenCache = await installationToken({privateKeyPem: env.GITHUB_APP_PRIVATE_KEY, issuer: env.GITHUB_CLIENT_ID, owner: env.REPO_OWNER, repos: [env.SITE_REPO, env.ORDERS_REPO], userAgent: UA});
   return tokenCache;
 }
-/* Who may sign in: admins.json in the private orders repository,
-     {"emails": ["owner@gmail.com"], "passwords": {"owner@gmail.com": "pbkdf2$…"}}
-   (read at most once a minute). While the file has no emails, the ALLOWED_EMAILS secret is used. An email without a
-   password creates one at its first sign-in, which still needs the authenticator code. */
-let adminsCache = null, adminsAt = 0;
+/* ---------- who may sign in ----------
+   access.json in the private orders repository, managed on the super admin's Access page:
+     {"users": [{email, name, status: "active" | "pending", sv, added, addedBy, activatedAt, pw, totp, invite, setup}], updated, sig}
+   pw is the password hash and totp the person's own authenticator secret (encrypted). Someone who has been added but
+   has not signed in yet is "pending": they hold a one-time invite code (only its hash, invite, is kept), which they
+   type instead of a password at their first sign-in. They then choose their password and scan a new authenticator
+   QR code (setup, until they confirm it with a code). An invitation lasts 14 days. sv goes up when a person is given
+   a new invite code, which signs them out everywhere.
+   Until the first change is made on the Access page (or if the file is deleted or edited outside this service), the
+   people in ALLOWED_EMAILS sign in with the shared TOTP_SECRET and the password saved in admins.json, so the owner
+   can always get back in. */
+const INVITE_MS = 14 * 864e5, MAX_PEOPLE = 10;
 const cleanEmails = list => [...new Set((Array.isArray(list) ? list : []).map(s => String(s).trim().toLowerCase()).filter(s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)))];
-const adminsUrl = env => `https://api.github.com/repos/${env.REPO_OWNER}/${env.ORDERS_REPO}/contents/admins.json`;
-async function admins(env, fresh) {
-  if (!fresh && adminsCache && Date.now() - adminsAt < 60e3) return adminsCache;
-  let doc = {}, sha = null;
-  const r = await fetch(adminsUrl(env), {headers: ghHeaders((await repoToken(env)).token)});
-  if (r.ok) { const f = await r.json(); sha = f.sha; doc = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(String(f.content || "").replace(/\s/g, "")), c => c.charCodeAt(0))) || "{}") || {} }
-  else if (r.status !== 404) throw new Error("admins.json read " + r.status);
-  let emails = cleanEmails(doc.emails);
-  if (!emails.length) emails = cleanEmails(String(env.ALLOWED_EMAILS || "").split(","));
-  adminsCache = {doc, sha, emails, passwords: doc.passwords && typeof doc.passwords === "object" ? doc.passwords : {}}; adminsAt = Date.now();
-  return adminsCache;
+const allowedEmails = env => cleanEmails(String(env.ALLOWED_EMAILS || "").split(","));
+const sessVer = (env, u) => (env.SESSION_VERSION || "1") + (u && u.sv ? "." + u.sv : "");
+const inviteExpired = u => u.status === "pending" && Date.now() - (u.added || 0) > INVITE_MS;
+const utf8b64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(String(b64 || "").replace(/\s/g, "")), c => c.charCodeAt(0)));
+/* passwords saved before the Access page existed: admins.json {"passwords": {"owner@gmail.com": "pbkdf2$…"}} */
+async function legacyPasswords(env) {
+  const r = await fetch(ordersUrl(env) + "/contents/admins.json", {headers: ghHeaders((await repoToken(env)).token)});
+  if (r.status === 404) return {};
+  if (!r.ok) throw new Error("admins.json read " + r.status);
+  try { const d = JSON.parse(utf8b64((await r.json()).content)); return d && d.passwords && typeof d.passwords === "object" ? d.passwords : {} } catch (e) { return {} }
 }
-/* Saves a new password hash for one email (retries once if the file changed at the same moment). */
-async function savePassword(env, email, hash) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const a = await admins(env, true);
-    const doc = {...a.doc, emails: a.emails, passwords: {...a.passwords, [email]: hash}};
-    const w = await fetch(adminsUrl(env), {method: "PUT", headers: ghHeaders((await repoToken(env)).token),
-      body: JSON.stringify({message: "Admin access: password set for " + email, content: b64utf8(JSON.stringify(doc, null, 1) + "\n"), ...(a.sha ? {sha: a.sha} : {})})});
-    if (w.ok) { adminsCache = null; return }
-    if (w.status !== 409 && w.status !== 422) throw new Error("admins.json write " + w.status);
+async function fallbackAccess(env, sha) {
+  const pw = await legacyPasswords(env);
+  return {users: allowedEmails(env).map(email => ({email, name: "", status: "active", sv: 0, added: 0, ...(typeof pw[email] === "string" ? {pw: pw[email]} : {})})), sha, managed: false};
+}
+let accCache = null;
+async function loadAccess(env, fresh) {
+  if (!fresh && accCache && Date.now() - accCache.at < 15e3) return accCache.v;
+  const r = await fetch(ordersUrl(env) + "/contents/access.json", {headers: ghHeaders((await repoToken(env)).token)});
+  let v;
+  if (r.status === 404) v = await fallbackAccess(env, null);
+  else if (!r.ok) throw new Error("access read " + r.status);
+  else {
+    const f = await r.json(); let d = null;
+    try { d = JSON.parse(utf8b64(f.content)) } catch (e) { d = null }
+    v = await verifyAccess(env.SESSION_SECRET, d) ? {users: d.users, sha: f.sha, managed: true} : await fallbackAccess(env, f.sha);
   }
-  throw new Error("admins.json busy");
+  accCache = {v, at: Date.now()};
+  return v;
+}
+async function saveAccess(env, users, sha) {
+  const doc = {users, updated: Date.now()}; doc.sig = await signAccess(env.SESSION_SECRET, doc);
+  const w = await fetch(ordersUrl(env) + "/contents/access.json", {method: "PUT", headers: ghHeaders((await repoToken(env)).token),
+    body: JSON.stringify({message: "Update who can sign in", content: b64utf8(JSON.stringify(doc, null, 1) + "\n"), ...(sha ? {sha} : {})})});
+  accCache = null;
+  if (!w.ok) { const e = new Error("access write " + w.status); e.conflict = w.status === 409 || w.status === 422; throw e }
+}
+/* The first managed list keeps the original people on the shared authenticator and the password they already use. */
+async function managedUsers(env, acc) {
+  if (acc.managed) return acc.users.map(u => ({...u}));
+  const t = await sealText(env.SESSION_SECRET, env.TOTP_SECRET);
+  return acc.users.map(u => ({...u, totp: t}));
+}
+const secretOf = (env, u) => u.totp ? openText(env.SESSION_SECRET, u.totp) : env.TOTP_SECRET;
+/* The person behind a session, if they still have access and the session is still current for them. */
+async function activePerson(env, s, fresh) {
+  const acc = await loadAccess(env, fresh);
+  const u = acc.users.find(x => x.email === s.e && x.status === "active");
+  return u && s.v === sessVer(env, u) ? u : null;
+}
+/* Saves a change to one person, retrying once if the list changed at the same moment. */
+async function updatePerson(env, email, change) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const acc = await loadAccess(env, true);
+    const users = (await managedUsers(env, acc)).map(x => x.email === email ? change(x) : x);
+    try { await saveAccess(env, users, acc.sha); return true } catch (e) { if (!e.conflict) throw e }
+  }
+  return false;
 }
 
-/* Slows down guessing: at most 8 failed sign-ins per account in 15 minutes and 30 per visitor in an hour (per
-   Cloudflare instance). Every sign-in needs the authenticator code as well as the password. */
+/* Slows down guessing: at most 8 failed sign-ins per account in 15 minutes and 30 sign-in requests per visitor in an
+   hour (per Cloudflare instance). Every sign-in needs the authenticator code as well as the password. */
 const attempts = new Map();
 function tooMany(email) {
   const now = Date.now(), list = (attempts.get(email) || []).filter(t => now - t < 15 * 60e3);
@@ -94,36 +138,120 @@ function tooMany(email) {
 }
 const noteFailure = email => attempts.set(email, [...(attempts.get(email) || []), Date.now()]);
 
-/* POST /login {email, password, code, remember, new_password?}
-   Errors: not_allowed, too_many, bad_code, bad_password, set_password (no password yet: send new_password),
-   weak_password. */
+/* POST /login {email, password, code, new_password, remember}
+   Step 1 (no code) checks the password, or the invite code of someone signing in for the first time, and says what
+   comes next: {need: "code"}, or for a first sign-in {setup: true, set_password: true, secret, otpauth}: the secret
+   to add to their authenticator app; they choose their password in step 2.
+   Step 2 (with the code) signs in. Errors: not_allowed, invite_expired, too_many, bad_password, bad_invite, bad_code,
+   weak_password, busy. */
 async function login(request, env) {
   if (limited(request, "login", 30)) return reply(request, env, {error: "too_many"}, 429);
   const b = await request.json().catch(() => ({}));
-  const email = String(b.email || "").trim().toLowerCase();
-  const a = await admins(env);
-  if (!a.emails.includes(email)) return reply(request, env, {error: "not_allowed"}, 403);
+  const email = String(b.email || "").trim().toLowerCase().slice(0, 120);
+  let acc = await loadAccess(env, true), u = acc.users.find(x => x.email === email);
+  if (!u) return reply(request, env, {error: "not_allowed"}, 403);
+  if (inviteExpired(u)) return reply(request, env, {error: "invite_expired"}, 403);
   if (tooMany(email)) return reply(request, env, {error: "too_many"}, 429);
-  if (!await checkTotp(env.TOTP_SECRET, b.code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
-  const stored = a.passwords[email];
-  if (!stored) {
-    if (!b.new_password) return reply(request, env, {error: "set_password"}, 409);
+  const code = String(b.code || "").replace(/\s/g, "");
+  if (u.status === "pending") {
+    if (!u.invite || !await verifyPassword(cleanInvite(b.password), u.invite)) { noteFailure(email); return reply(request, env, {error: "bad_invite"}, 401) }
+    if (!u.setup) {
+      const setup = await sealText(env.SESSION_SECRET, newTotpSecret());
+      try { await saveAccess(env, acc.users.map(x => x.email === email ? {...x, setup} : x), acc.sha) }
+      catch (e) { if (!e.conflict) throw e }
+      acc = await loadAccess(env, true); u = acc.users.find(x => x.email === email && x.status === "pending");
+      if (!u || !u.setup) return reply(request, env, {error: "busy"}, 409);
+    }
+    const secret = await openText(env.SESSION_SECRET, u.setup);
+    if (!secret) return reply(request, env, {error: "busy"}, 409);
+    if (!code) return reply(request, env, {setup: true, set_password: true, email, secret, otpauth: otpauthUri(secret, email)});
     if (!passwordOk(b.new_password)) return reply(request, env, {error: "weak_password"}, 400);
-    await savePassword(env, email, await hashPassword(b.new_password));
-  } else if (!await verifyPassword(b.password, stored)) { noteFailure(email); return reply(request, env, {error: "bad_password"}, 401) }
+    if (!await checkTotp(secret, code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+    const {setup, invite, ...rest} = u;
+    u = {...rest, status: "active", totp: setup, pw: await hashPassword(b.new_password), activatedAt: Date.now()};
+    try { await saveAccess(env, acc.users.map(x => x.email === email ? u : x), acc.sha) }
+    catch (e) { if (e.conflict) return reply(request, env, {error: "busy"}, 409); throw e }
+  } else if (!u.pw) {
+    /* an original owner account without a password yet chooses one together with the code */
+    if (!code) return reply(request, env, {need: "code", set_password: true, email});
+    if (!passwordOk(b.new_password)) return reply(request, env, {error: "weak_password"}, 400);
+    const secret = await secretOf(env, u);
+    if (!secret || !await checkTotp(secret, code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+    const pw = await hashPassword(b.new_password);
+    if (!await updatePerson(env, email, x => ({...x, pw}))) return reply(request, env, {error: "busy"}, 409);
+  } else {
+    if (!await verifyPassword(b.password, u.pw)) { noteFailure(email); return reply(request, env, {error: "bad_password"}, 401) }
+    if (!code) return reply(request, env, {need: "code", email});
+    const secret = await secretOf(env, u);
+    if (!secret || !await checkTotp(secret, code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+  }
   attempts.delete(email);
   const ms = b.remember ? LONG : SHORT;
-  const session = await makeSession(env.SESSION_SECRET, email, ms, env.SESSION_VERSION || "1");
+  const session = await makeSession(env.SESSION_SECRET, email, ms, sessVer(env, u));
   const t = await repoToken(env);
-  return reply(request, env, {session, session_exp: Date.now() + ms, token: t.token, token_exp: t.exp, email});
+  return reply(request, env, {session, session_exp: Date.now() + ms, token: t.token, token_exp: t.exp, email, name: u.name || ""});
 }
 
 async function refresh(request, env) {
   const b = await request.json().catch(() => ({}));
-  const s = await readSession(env.SESSION_SECRET, b.session, env.SESSION_VERSION || "1");
-  if (!s || !(await admins(env)).emails.includes(s.e)) return reply(request, env, {error: "session_expired"}, 401);
+  const s = await readSession(env.SESSION_SECRET, b.session, null);
+  const u = s && await activePerson(env, s);
+  if (!u) return reply(request, env, {error: "session_expired"}, 401);
   const t = await repoToken(env);
-  return reply(request, env, {token: t.token, token_exp: t.exp, email: s.e});
+  return reply(request, env, {token: t.token, token_exp: t.exp, email: s.e, name: u.name || ""});
+}
+
+/* POST /access {session, op, email, name, password, new_password}: the Access page.
+     list      who has access
+     add       gives someone access and returns their one-time invite code (shown once)
+     remove    takes access away; the last person who can sign in cannot be removed
+     reset     a new invite code: at their next sign-in the person chooses a new password and sets up a new
+               authenticator, and they are signed out everywhere now (for a lost phone, a forgotten password or an
+               expired invitation)
+     password  changes your own password (needs the current one)
+   Anyone with access can change the list. */
+async function manageAccess(request, env) {
+  const b = await request.json().catch(() => ({}));
+  const s = await readSession(env.SESSION_SECRET, b.session, null);
+  const me = s && await activePerson(env, s, true);
+  if (!me) return reply(request, env, {error: "session_expired"}, 401);
+  const acc = await loadAccess(env);
+  const view = (users, managed, extra) => reply(request, env, {me: s.e, managed, users: users.map(u => ({email: u.email, name: u.name || "",
+    status: inviteExpired(u) ? "expired" : u.status, added: u.added || 0, activatedAt: u.activatedAt || 0, addedBy: u.addedBy || ""})), ...extra});
+  const op = String(b.op || "list");
+  if (op === "list") return view(acc.users, acc.managed);
+  if (op === "password") {
+    if (tooMany(s.e)) return reply(request, env, {error: "too_many"}, 429);
+    if (me.pw && !await verifyPassword(b.password, me.pw)) { noteFailure(s.e); return reply(request, env, {error: "bad_password"}, 401) }
+    if (!passwordOk(b.new_password)) return reply(request, env, {error: "weak_password"}, 400);
+    const pw = await hashPassword(b.new_password);
+    if (!await updatePerson(env, s.e, x => ({...x, pw}))) return reply(request, env, {error: "busy"}, 409);
+    const now = await loadAccess(env, true);
+    return view(now.users, now.managed, {changed: true});
+  }
+  const email = String(b.email || "").trim().toLowerCase().slice(0, 120);
+  let users = await managedUsers(env, acc), invite = "";
+  const target = users.find(u => u.email === email), active = users.filter(u => u.status === "active");
+  if (op === "add") {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return reply(request, env, {error: "bad_email"}, 400);
+    if (target) return reply(request, env, {error: "exists"}, 409);
+    if (users.length >= MAX_PEOPLE) return reply(request, env, {error: "too_many_people"}, 400);
+    invite = newInviteCode();
+    users.push({email, name: str(b.name, 40), status: "pending", sv: 0, added: Date.now(), addedBy: s.e, invite: await hashPassword(cleanInvite(invite))});
+  } else if (op === "remove") {
+    if (!target) return reply(request, env, {error: "not_found"}, 404);
+    if (target.status === "active" && active.length <= 1) return reply(request, env, {error: "last_admin"}, 400);
+    users = users.filter(u => u.email !== email);
+  } else if (op === "reset") {
+    if (!target) return reply(request, env, {error: "not_found"}, 404);
+    invite = newInviteCode();
+    const hash = await hashPassword(cleanInvite(invite));
+    const {totp, setup, pw, invite: old, ...rest} = target;
+    users = users.map(u => u.email === email ? {...rest, status: "pending", sv: (target.sv || 0) + 1, added: Date.now(), addedBy: s.e, invite: hash} : u);
+  } else return reply(request, env, {error: "bad_request"}, 400);
+  try { await saveAccess(env, users, acc.sha) }
+  catch (e) { if (e.conflict) return reply(request, env, {error: "busy"}, 409); throw e }
+  return view(users, true, invite ? {invite, email} : {});
 }
 
 /* ---------- "Sign in with GitHub" ---------- */
