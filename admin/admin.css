@@ -46,7 +46,7 @@ body{background:var(--bg)}
 .tb-text{min-width:0}
 .tb-title h1{font-size:24px;line-height:1.2}
 .tb-title p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
-.amain{padding:22px 32px 120px;max-width:1100px;width:100%}
+.amain{padding:22px 32px 120px;max-width:1240px;width:100%}
 .panel{display:flex;flex-direction:column;gap:14px}
 .src{font-family:var(--body);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:var(--soft);color:var(--brand);border-radius:999px;padding:2px 8px;vertical-align:middle}
 .src.urgent{background:#FDE2E2;color:#B42318}
@@ -118,7 +118,7 @@ body{background:var(--bg)}
 .tframe.phone{width:390px;max-width:100%;margin:0 auto;border-radius:28px;border:10px solid #1C1C1C;height:760px}
 
 .savebar{position:fixed;left:248px;right:0;bottom:0;z-index:9;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(42,20,12,.08);padding-bottom:env(safe-area-inset-bottom,0px)}
-.sbin{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 32px;max-width:1100px}
+.sbin{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 32px;max-width:1240px}
 .sbacts{display:flex;gap:8px}
 .st{font-size:14px;font-weight:700;color:var(--muted)}
 .st.dirty{color:var(--brand)}
@@ -266,14 +266,14 @@ button.kpi:hover{border-color:#D8CFCE}
 .kpi.hot .v{color:var(--rose)}
 
 .otools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.otools-r{display:flex;gap:8px;align-items:center;flex:1 1 360px;justify-content:flex-end;min-width:0}
+.otools-r{display:flex;gap:8px;align-items:center;flex:1 1 440px;min-width:0} /* search fills the row: beside the tabs when there is room, otherwise the whole next line */
 .seg{display:flex;gap:4px;background:#ECE7E6;border-radius:12px;padding:4px;overflow-x:auto;scrollbar-width:none;max-width:100%}
 .seg::-webkit-scrollbar{display:none}
 .seg button{flex:none;border:0;background:transparent;border-radius:9px;min-height:36px;padding:6px 12px;font-weight:700;font-size:13.5px;color:var(--muted);white-space:nowrap;display:flex;gap:6px;align-items:center}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(35,28,31,.14)}
 .seg .n{font-size:12px;background:rgba(35,28,31,.07);border-radius:999px;padding:0 7px;min-width:20px;text-align:center;font-variant-numeric:tabular-nums}
 .seg button[aria-pressed="true"] .n{background:var(--rose-bg);color:var(--rose)}
-.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:44px;flex:1 1 220px;max-width:340px;min-width:0;color:var(--muted)}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:44px;flex:1 1 220px;min-width:0;color:var(--muted)}
 .search svg{width:18px;height:18px;flex:none}
 .search input{border:0;padding:0;height:100%;background:transparent;outline:none;min-width:0}
 .btn.md{padding:10px 16px;min-height:44px;font-size:14.5px;border-radius:12px}

@@ -384,12 +384,15 @@ $("alertNotif").onclick = async () => {
   renderBell();
 };
 function setLive(on, why) {
-  $("liveSt").classList.toggle("off", !on); $("liveTxt").textContent = on ? "Live" : "Offline";
+  $("liveSt").classList.toggle("off", !on); $("liveTxt").textContent = on ? "Live" : /^No internet/.test(why || "") ? "No internet" : "Offline";
   $("liveSt").title = on ? "Checked for new orders at " + new Date().toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"}) + ". It checks every 20 seconds." : (why || "Orders could not be checked");
 }
 /* Every 20 seconds, also while the tab is in the background (browsers may slow this to once a minute after a while). */
 function poll() { clearTimeout(pollT); if (DEMO) return; pollT = setTimeout(async () => { if (TOKEN && ORDERS_OK && !ordersBusy) await loadOrders(); refreshTimes(); poll() }, POLL_MS) }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN && ORDERS_OK && !$("app").hidden) { loadOrders(); poll() } });
+/* When the internet comes back, check straight away instead of waiting for the next 20-second check. */
+window.addEventListener("online", () => { if (TOKEN && ORDERS_OK && !$("app").hidden) { loadOrders(); poll() } });
+window.addEventListener("offline", () => setLive(false, "No internet connection. Orders are checked again as soon as it is back."));
 
 /* ---------- loading and saving orders ---------- */
 $("oFilter").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) setFilter(b.dataset.f) });
