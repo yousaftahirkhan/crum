@@ -132,7 +132,7 @@ function renderHero() {
 function slideText() {
   const s = slideList()[slideI], el = $("heroText"); if (!s) return;
   el.classList.remove("in"); void el.offsetWidth;
-  el.innerHTML = `${s.kicker ? `<span class="eyebrow">${esc(s.kicker)}</span>` : ""}<h1>${esc(s.title)}</h1>${s.text ? `<p>${esc(s.text)}</p>` : ""}
+  el.innerHTML = `${s.kicker ? `<span class="eyebrow">${esc(s.kicker)}</span>` : ""}<h2>${esc(s.title)}</h2>${s.text ? `<p>${esc(s.text)}</p>` : ""}
     <div class="acts"><button class="btn brand" type="button" data-go="${esc(s.go || "all")}">${esc(s.btn || "Order now")}</button><button class="btn ghost" type="button" data-go="all">View the menu</button></div>`;
   el.classList.add("in");
 }
@@ -189,6 +189,7 @@ function renderSteps() {
   const t = stepLines();
   $("howto").hidden = !t.length;
   $("steps").innerHTML = t.map(l => `<li>${esc(l)}</li>`).join("");
+  $("steps").style.setProperty("--cols", t.length <= 4 ? t.length : Math.ceil(t.length / 2));
 }
 function renderReviews() {
   const r = (S.reviews || []).filter(x => x && x.text); $("revSec").hidden = !r.length;
@@ -204,6 +205,7 @@ const waChat = text => "https://wa.me/" + intl(S.shop.wa) + "?text=" + encodeURI
 function renderChrome() {
   const s = S.shop, name = s.name || "Crum";
   document.title = name + (S.shop.area ? " " + S.shop.area : "") + " | " + (S.products.map(p => p.name).join(" and ") || "Desserts") + (S.shop.city ? " desserts, " + S.shop.city : "");
+  $("pageH1").textContent = `${name}${s.area ? " " + s.area : ""}: ${S.products.map(p => p.name).join(" and ") || "Desserts"}${s.city ? " desserts in " + s.city : ""}`;
   $("logo").innerHTML = logoSVG(name); $("footLogo").innerHTML = logoSVG(name); $("menuLogo").innerHTML = logoSVG(name);
   $("logo").setAttribute("aria-label", name + " home");
   $("footAbout").textContent = s.footAbout || "";
@@ -506,13 +508,19 @@ function orderText(o) {
 }
 const waLink = o => waChat(typeof o === "string" ? o : orderText(o));
 const setMsg = (id, t, err) => { $(id).textContent = t; $(id).className = "msg" + (err ? " err" : "") };
+/* A Pakistani mobile number (0312 3456789, +92 312 3456789), or an international number written with + or 00 for
+   customers ordering from abroad. */
+const phoneOk = v => { const s = String(v || "").replace(/[\s\-().]/g, ""); return /^(?:\+92|0092|92|0)3\d{9}$/.test(s) || /^(?:\+|00)(?!92)[1-9]\d{7,14}$/.test(s) };
 function check() {
   if (!Object.keys(cart).length) return "Please add a dessert to your cart.";
   if (!$("fName").value.trim()) return "Please enter your name.";
-  if ($("fPhone").value.replace(/\D/g, "").length < 10) return "Please enter a valid phone number, for example 0312 3456789.";
+  if (!phoneOk($("fPhone").value)) return "Please enter a valid mobile number, for example 0312 3456789. From abroad, start with your country code, for example +44.";
   if (areas().length ? !$("fArea").value : !$("fAreaTxt").value.trim()) return "Please enter your area.";
   if (!$("fAddr").value.trim()) return "Please enter your delivery address.";
   if (!$("fDate").value) return "Please choose the date you need your order.";
+  updateSlots();
+  if ($("fDate").value < earliestDate()) return `Please choose a date from ${fmtDate(earliestDate())}.`;
+  if ($("fDate").value === ymd(new Date()) && !slotOpen($("fTime").value)) return "That time has passed for today. Please choose a later time or another day.";
   const t = totals();
   if (proofNeeded(t)) {
     if (PROOF.state === "busy") return "Your screenshot is still uploading. Please wait a moment.";
@@ -566,8 +574,22 @@ function setStep(s) {
   $("checkoutBtn").hidden = s !== "cart"; $("confirmBtn").hidden = s !== "details"; $("confirmNote").hidden = s !== "details" || intl(S.shop.wa).length < 11; setMsg("msg", "");
   $("cartFloat").hidden = s === "pay" || !Object.keys(cart).length; document.body.classList.toggle("has-cart", !$("cartFloat").hidden);
 }
-{ const t = new Date(), p = n => String(n).padStart(2, "0"); $("fDate").min = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` }
-$("checkoutBtn").onclick = () => { if (!Object.keys(cart).length) { setMsg("msg", "Please add a dessert to your cart.", true); return } setStep("details"); setTimeout(() => $("fName").focus(), 50) };
+/* Delivery date and time: no past dates, and on today's date only the time slots that are still possible (a slot
+   closes an hour before it ends). After the last slot of the day, the earliest date offered is tomorrow. */
+const SLOT_END = {"Any time": 21, "Morning (10am–1pm)": 13, "Afternoon (1pm–5pm)": 17, "Evening (5pm–9pm)": 21}, SLOT_CLOSE_MIN = 60;
+const ymd = d => { const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` };
+const slotOpen = (label, now = new Date()) => { const end = SLOT_END[label]; return end == null || now.getHours() * 60 + now.getMinutes() <= end * 60 - SLOT_CLOSE_MIN };
+function earliestDate(now = new Date()) { const d = new Date(now); if (!slotOpen("Any time", now)) d.setDate(d.getDate() + 1); return ymd(d) }
+function updateSlots() {
+  const now = new Date(), min = earliestDate(now), f = $("fDate"), t = $("fTime");
+  f.min = min; if (f.value && f.value < min) f.value = min;
+  const today = f.value === ymd(now);
+  [...t.options].forEach(o => { o.disabled = today && !slotOpen(o.value, now); o.hidden = o.disabled });
+  if (t.selectedOptions[0] && t.selectedOptions[0].disabled) t.value = ([...t.options].find(o => !o.disabled) || t.options[0]).value;
+}
+$("fDate").addEventListener("change", updateSlots);
+updateSlots();
+$("checkoutBtn").onclick = () => { if (!Object.keys(cart).length) { setMsg("msg", "Please add a dessert to your cart.", true); return } updateSlots(); setStep("details"); setTimeout(() => $("fName").focus(), 50) };
 $("toCartBtn").onclick = () => setStep("cart");
 const openCart = () => { if (STEP !== "pay") setStep("cart"); show($("drawer")) };
 $("newOrderBtn").onclick = () => { cart = {}; persist(); ORDER = null; DRAFT_NO = null; proofSeq++; PROOF = {state: "none"}; setStep("cart"); refresh(); toast("Cart cleared") };

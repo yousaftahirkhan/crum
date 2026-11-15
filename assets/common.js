@@ -34,7 +34,7 @@ const PENDING_PHOTOS = new Map();
 const photoSrc = ph => !ph ? "" : /^(data:|https?:|blob:)/i.test(ph) ? ph : PENDING_PHOTOS.has(ph) ? PENDING_PHOTOS.get(ph) : ASSET_BASE + ph;
 const rs = n => "Rs " + (Math.round(Number(n)) || 0).toLocaleString("en-PK"); /* no-break space keeps "Rs" and the amount on one line */
 const num = s => Number(String(s || "").replace(/[^\d]/g, "")) || 0;
-const intl = p => { let d = String(p || "").replace(/\D/g, ""); if (d.startsWith("0")) d = "92" + d.slice(1); return d };
+const intl = p => { let d = String(p || "").replace(/\D/g, ""); if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "92" + d.slice(1); return d };
 const fmtDate = s => { if (!s) return ""; const d = new Date(s + "T00:00:00"); return isNaN(d) ? s : d.toLocaleDateString("en-PK", {day: "numeric", month: "short", year: "numeric"}) };
 const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
 let toastTimer; function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 2600) }

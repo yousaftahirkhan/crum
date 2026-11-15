@@ -91,3 +91,6 @@ input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--brand)}
   @keyframes slide{from{transform:translateX(30px);opacity:.6}}
   @keyframes slideL{from{transform:translateX(-30px);opacity:.6}}
 }
+
+/* read by search engines and screen readers, not shown */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

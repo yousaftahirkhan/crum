@@ -25,9 +25,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" id="fonts-poppins" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=38">
-<link rel="stylesheet" href="assets/store.css?v=38">
-<script src="assets/themes.js?v=38"></script>
+<link rel="stylesheet" href="assets/base.css?v=39">
+<link rel="stylesheet" href="assets/store.css?v=39">
+<script src="assets/themes.js?v=39"></script>
 </head>
 <body>
 <a class="skip" href="#menu">Skip to the menu</a>
@@ -67,6 +67,7 @@
 <div class="loader" id="loader">Loading the menu…</div>
 <div class="loader" id="loadErr" hidden>The menu could not load. Please check your connection and <a href="">reload the page</a>.</div>
 
+<h1 class="sr-only" id="pageH1">Crum Bahria Town: Tiramisu and Classic Lotus Crumb desserts in Lahore</h1>
 <main id="app" hidden>
   <!-- Hero banner: text on the left, photos that change on their own on the right -->
   <section class="hero" aria-label="Featured" aria-roledescription="carousel">
@@ -143,7 +144,7 @@
 
   <!-- Pay with confidence -->
   <section class="wrap trust-sec" id="trustSec">
-    <span class="eyebrow">Pay with confidence</span><h2>Order first, pay safely</h2>
+    <span class="eyebrow">Pay with confidence</span><h2>Your payment is safe with us</h2>
     <div class="trust" id="trust"></div>
     <button class="link" type="button" data-policy="payment">Read our payment and safety policy</button>
   </section>
@@ -235,7 +236,7 @@
     <button class="link" type="button" id="toCartBtn" style="align-self:start">‹ Back to cart</button>
     <label for="fName">Full name<input id="fName" autocomplete="name" maxlength="60" placeholder="Ayesha Khan"></label>
     <label for="fPhone">Phone (WhatsApp)<input id="fPhone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="0312 3456789"></label>
-    <label for="fArea">Area<select id="fArea"></select><input id="fAreaTxt" maxlength="80" placeholder="e.g. Model Town" hidden></label>
+    <label for="fArea">Area<select id="fArea"></select><input id="fAreaTxt" maxlength="80" placeholder="e.g. Model Town" aria-label="Your area" hidden></label>
     <label for="fAddr">Full address<textarea id="fAddr" rows="2" maxlength="300" placeholder="House no., street, nearby landmark"></textarea></label>
     <div class="two">
       <label for="fDate">Needed on<input id="fDate" type="date"></label>
@@ -247,7 +248,7 @@
       <p class="note" id="cpNote"></p>
       <div class="accts" id="cpAccts" hidden></div>
       <div class="proof" id="proofBox" hidden></div>
-      <input type="file" id="fProof" accept="image/*" hidden>
+      <input type="file" id="fProof" accept="image/*" aria-label="Payment screenshot" hidden>
       <ul class="safe" id="cpSafe"></ul>
     </div>
   </div>
@@ -299,8 +300,8 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="assets/config.js?v=38"></script>
-<script src="assets/common.js?v=38"></script>
-<script src="assets/store.js?v=38"></script>
+<script src="assets/config.js?v=39"></script>
+<script src="assets/common.js?v=39"></script>
+<script src="assets/store.js?v=39"></script>
 </body>
 </html>
