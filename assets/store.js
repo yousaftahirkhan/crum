@@ -281,7 +281,7 @@ function openProduct(pid, sid, keep) {
       <h2 id="pmName">${esc(p.name)}</h2>
       ${p.line ? `<p class="line">${esc(p.line)}</p>` : ""}
       <fieldset class="szs"><legend>Size</legend>
-        ${sizes.map(x => { const xo = sizeAvailable(p, x); return `<label class="sz${xo ? "" : " off"}"><input type="radio" name="pmsz" value="${esc(x.id)}"${x.id === s.id ? " checked" : ""}${xo ? "" : " disabled"}><span><b>${esc(x.name)}</b>${x.serves || !xo ? `<small>${xo ? esc(x.serves) : "Sold out"}</small>` : ""}</span><span class="p">${rs(x.price)}</span></label>` }).join("")}
+        ${sizes.map(x => { const xo = sizeAvailable(p, x); return `<label class="sz${xo ? "" : " off"}"><input type="radio" name="pmsz" value="${esc(x.id)}"${x.id === s.id ? " checked" : ""}${xo ? "" : " disabled"}><span><b>${esc(x.name)}</b>${x.serves || !xo ? `<small>${xo ? esc(x.serves) + (x.id === "dawat" && +S.shop.dawatNotice > 0 ? ` · order ${Math.round(+S.shop.dawatNotice)} hours ahead` : "") : "Sold out"}</small>` : ""}</span><span class="p">${rs(x.price)}</span></label>` }).join("")}
       </fieldset>
       <div class="buy">
         <div class="qty" role="group" aria-label="Quantity"><button type="button" data-pmq="-1" aria-label="One less">−</button><span id="pmQty">${PM.qty}</span><button type="button" data-pmq="1" aria-label="One more">+</button></div>
@@ -520,7 +520,7 @@ function check() {
   if (!$("fDate").value) return "Please choose the date you need your order.";
   updateSlots();
   if ($("fDate").value < earliestDate()) return `Please choose a date from ${fmtDate(earliestDate())}.`;
-  if ($("fDate").value === ymd(new Date()) && !slotOpen($("fTime").value)) return "That time has passed for today. Please choose a later time or another day.";
+  if ($("fDate").value === ymd(readyAt()) && !slotOpen($("fTime").value, readyAt())) return noticeHours() ? `A Dawat Serving needs ${noticeHours()} hours' notice. Please choose a later time or another day.` : "That time has passed for today. Please choose a later time or another day.";
   const t = totals();
   if (proofNeeded(t)) {
     if (PROOF.state === "busy") return "Your screenshot is still uploading. Please wait a moment.";
@@ -579,13 +579,19 @@ function setStep(s) {
 const SLOT_END = {"Any time": 21, "Morning (10am–1pm)": 13, "Afternoon (1pm–5pm)": 17, "Evening (5pm–9pm)": 21}, SLOT_CLOSE_MIN = 60;
 const ymd = d => { const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` };
 const slotOpen = (label, now = new Date()) => { const end = SLOT_END[label]; return end == null || now.getHours() * 60 + now.getMinutes() <= end * 60 - SLOT_CLOSE_MIN };
-function earliestDate(now = new Date()) { const d = new Date(now); if (!slotOpen("Any time", now)) d.setDate(d.getDate() + 1); return ymd(d) }
+/* A Dawat Serving needs shop.dawatNotice hours of notice (set in the admin); other sizes need none. readyAt is the
+   earliest moment the order can be delivered, and only time slots after it are offered. */
+const noticeHours = () => Object.keys(cart).some(k => k.split("|")[1] === "dawat") ? Math.max(0, Math.round(+S.shop.dawatNotice || 0)) : 0;
+const readyAt = (now = new Date()) => new Date(now.getTime() + noticeHours() * 3600e3);
+function earliestDate(now = new Date()) { const r = readyAt(now), d = new Date(r); if (!slotOpen("Any time", r)) d.setDate(d.getDate() + 1); return ymd(d) }
 function updateSlots() {
-  const now = new Date(), min = earliestDate(now), f = $("fDate"), t = $("fTime");
+  const r = readyAt(), min = earliestDate(), f = $("fDate"), t = $("fTime"), n = noticeHours();
   f.min = min; if (f.value && f.value < min) f.value = min;
-  const today = f.value === ymd(now);
-  [...t.options].forEach(o => { o.disabled = today && !slotOpen(o.value, now); o.hidden = o.disabled });
+  const first = f.value === ymd(r);
+  [...t.options].forEach(o => { o.disabled = first && !slotOpen(o.value, r); o.hidden = o.disabled });
   if (t.selectedOptions[0] && t.selectedOptions[0].disabled) t.value = ([...t.options].find(o => !o.disabled) || t.options[0]).value;
+  $("fDateHint").textContent = n ? `A Dawat Serving needs ${n} hours' notice. The earliest delivery is ${fmtDate(min)}.` : "";
+  $("fDateHint").hidden = !n;
 }
 $("fDate").addEventListener("change", updateSlots);
 updateSlots();

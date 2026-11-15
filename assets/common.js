@@ -77,7 +77,7 @@ function howtoSteps(S) {
   const pay = !pct ? "Nothing is paid at checkout: every order is cash on delivery."
     : (from ? `Orders under ${rs(from)} are cash on delivery. For orders of ${rs(from)} or more, pay ${what}` : `Pay ${what}`) + " to one of the accounts shown at checkout and upload the screenshot.";
   return [
-    "Add desserts to your cart and enter your delivery details.",
+    "Add desserts to your cart and enter your delivery details." + (+S.shop.dawatNotice > 0 && S.products.some(p => p.sizes.some(s => s.id === "dawat")) ? ` A Dawat Serving needs ${Math.round(+S.shop.dawatNotice)} hours' notice.` : ""),
     pay,
     "Place the order. Your WhatsApp chat with us opens with your order ID; tap Send.",
     !pct ? "We confirm your order on WhatsApp." : from ? "We confirm your order on WhatsApp, after checking your payment if you paid at checkout." : "We check your payment and confirm your order on WhatsApp.",

@@ -25,9 +25,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" id="fonts-poppins" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Fredoka:wght@600;700&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=39">
-<link rel="stylesheet" href="assets/store.css?v=39">
-<script src="assets/themes.js?v=39"></script>
+<link rel="stylesheet" href="assets/base.css?v=40">
+<link rel="stylesheet" href="assets/store.css?v=40">
+<script src="assets/themes.js?v=40"></script>
 </head>
 <body>
 <a class="skip" href="#menu">Skip to the menu</a>
@@ -242,6 +242,7 @@
       <label for="fDate">Needed on<input id="fDate" type="date"></label>
       <label for="fTime">Time<select id="fTime"><option>Any time</option><option>Morning (10am–1pm)</option><option>Afternoon (1pm–5pm)</option><option>Evening (5pm–9pm)</option></select></label>
     </div>
+    <p class="hint" id="fDateHint" hidden></p>
     <label for="fNote">Note (optional)<input id="fNote" maxlength="200" placeholder="e.g. Please call before arriving"></label>
     <div class="paybox" id="checkoutPay">
       <div class="r"><b id="cpLbl">Payment</b><b id="cpAmt"></b></div>
@@ -300,8 +301,8 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="assets/config.js?v=39"></script>
-<script src="assets/common.js?v=39"></script>
-<script src="assets/store.js?v=39"></script>
+<script src="assets/config.js?v=40"></script>
+<script src="assets/common.js?v=40"></script>
+<script src="assets/store.js?v=40"></script>
 </body>
 </html>
